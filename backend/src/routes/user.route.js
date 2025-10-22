@@ -1,10 +1,11 @@
 import { Router } from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
-import { login, logout } from "../controllers/user.controller.js"
+import { loginUser, logoutUser, registerAdmin, updatePassword } from "../controllers/user.controller.js";
+const router = Router();
 
-const routes = Router();
-routes.use();
-routes.post("/login", login);
-routes.get("/logout", verifyJWT, logout);
+router.route("/register").post(registerAdmin);
+router.route("/login").post(loginUser);
+router.route("/logout").get(verifyJWT, logoutUser);
+router.route("/update-password").get(verifyJWT, updatePassword);
 
-export default routes;
+export default router;
