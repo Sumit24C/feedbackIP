@@ -1,14 +1,33 @@
-import { asyncHandler } from "../utils/asyncHandler.js"
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
-
+import { Department } from "../models/department.model.js"
 export const createDepartment = asyncHandler(async (req, res) => {
     // Input: dept_name
     // 1. Validate dept_name
     // 2. Check if department already exists
     // 3. Create new department document
     // 4. Return department info
+
+    const {dept_name} = req.body;
+    if (!dept_name) {
+        throw new ApiError(401, "Department name is required");
+    }
+
+    const existedDepartment = await Department.findOne({name: dept_name});
+
+    if (existedDepartment) {
+        throw new ApiError(409, "Department already exists");
+    }
+
+    const department = await Department.create({
+        name: dept_name
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, department, "Department created successfully")
+    );
 });
 
 export const addStudents = asyncHandler(async (req, res) => {
@@ -19,6 +38,9 @@ export const addStudents = asyncHandler(async (req, res) => {
     //    b. Hash password
     //    c. Create Student document linking userId and deptId
     // 3. Return created students
+
+    const {dept_id} = req.params;
+    // const {name, }
 });
 
 export const addFaculty = asyncHandler(async (req, res) => {

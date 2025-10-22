@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asynHandler.js"
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
@@ -9,11 +9,49 @@ const COOKIE_OPTIONS = {
     sameSite: "strict"
 }
 
-export const login = asyncHandler(async (req, res) => {
+const accessTokenExpiry = parseInt(process.env.ACCESS_TOKEN_EXPIRY);
+const refreshTokenExpiry = parseInt(process.env.REFRESH_TOKEN_EXPIRY);
+
+export const registerAdmin = asyncHandler(async (req, res) => {
+    console.log("success");
+    const { fullname, email, password, role } = req.body;
+
+    if ([fullname, email, password, role].some(
+        (field) => !field || field?.trim() === ""
+    )) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const existedUser = await User.findOne({ email: email });
+
+    if (existedUser) {
+        throw new ApiError(409, "User alreadt exists");
+    }
+
+    const user = await User.create({
+        email, fullname, role, password
+    });
+
+    if (!user) {
+        throw new ApiError(500, "Failed to create user");
+    }
+
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    return res.status(200)
+        .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
+        .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
+        .json(
+            new ApiResponse(200, {}, "successfully login")
+        );
+});
+
+export const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        throw new ApiError(401, "invalid input");
+        throw new ApiError(401, "Invalid input");
     }
 
     const user = await User.findOne({ email: email });
@@ -30,13 +68,36 @@ export const login = asyncHandler(async (req, res) => {
     const refreshToken = user.generateRefreshToken();
 
     return res.status(200)
-        .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY) * 1000 })
-        .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY) * 1000 })
+        .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
+        .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
         .json(
             new ApiResponse(200, {}, "successfully login")
         )
-})
+});
+
+export const logoutUser = asyncHandler(async (req, res) => {
+    return res.status(200)
+        .clearCookie("accessToken", { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
+        .clearCookie("refreshToken", { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
+        .json(new ApiResponse(200, {}, "successfully logout"));
+});
 
 export const updatePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
 
-})
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(401, "All fields are required");
+    }
+
+    const user = await User.findById(req.user._id);
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword, user.password);
+    if (!isPasswordCorrect) {
+        throw new ApiError(403, "Invalid password");
+    }
+    user.password = password;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+        new ApiResponse(200, updatedUser, "updated password successfully")
+    );
+});

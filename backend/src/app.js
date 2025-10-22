@@ -21,9 +21,9 @@ import facultyRoutes from "./routes/faculty.route.js";
 import studentRoutes from "./routes/student.route.js";
 import formRoutes from "./routes/form.route.js";
 
-app.use("api/user", userRoutes);
-app.use("api/admin", adminRoutes);
-app.use("api/faculty", facultyRoutes);
-app.use("api/student", studentRoutes);
-app.use("api/form", formRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/faculty", facultyRoutes);
+app.use("/api/student", studentRoutes);
+app.use("/api/form", formRoutes);
 export { app }
