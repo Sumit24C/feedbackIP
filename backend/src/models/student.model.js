@@ -10,17 +10,17 @@ const studentSchema = new mongoose.Schema({
         ref: "Department",
     },
     roll_no: {
-        type: Number,
+        type: String,
         required: true,
     },
     academic_year: {
         type: Number,
         required: true,
     },
-    classSection: [{
+    classSection: {
         type: String,
         required: true,
-    }],
+    },
 }, { timestamps: true })
 
 const Student = mongoose.model("Student", studentSchema);

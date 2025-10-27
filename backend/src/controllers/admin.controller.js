@@ -2,7 +2,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
+import { Student } from "../models/student.model.js";
 import { Department } from "../models/department.model.js"
+import * as XLSX from "xlsx"
+import fs from "fs-extra"
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import { excelToJson } from "../utils/excelToJson.js";
+
 export const createDepartment = asyncHandler(async (req, res) => {
     // Input: dept_name
     // 1. Validate dept_name
@@ -10,12 +17,12 @@ export const createDepartment = asyncHandler(async (req, res) => {
     // 3. Create new department document
     // 4. Return department info
 
-    const {dept_name} = req.body;
+    const { dept_name } = req.body;
     if (!dept_name) {
         throw new ApiError(401, "Department name is required");
     }
 
-    const existedDepartment = await Department.findOne({name: dept_name});
+    const existedDepartment = await Department.findOne({ name: dept_name });
 
     if (existedDepartment) {
         throw new ApiError(409, "Department already exists");
@@ -39,8 +46,76 @@ export const addStudents = asyncHandler(async (req, res) => {
     //    c. Create Student document linking userId and deptId
     // 3. Return created students
 
-    const {dept_id} = req.params;
-    // const {name, }
+    const { dept_id } = req.params;
+    if (!dept_id) {
+        throw new ApiError(403, "DepartmentId is required");
+    }
+
+    const department = await Department.findById(dept_id);
+    if (!department) {
+        throw new ApiError(401, "Invalid deptId");
+    }
+
+    const studentFile = req.file;
+    if (!studentFile) {
+        throw new ApiError(403, "Excel file is required");
+    }
+
+    const studentData = await excelToJson(studentFile);
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const defaultPassword = "student123";
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+        const emails = studentData.map(s => s.email);
+        const existingUsers = await User.find({ email: { $in: emails } }, { email: 1 });
+        const existingEmails = new Set(existingUsers.map((u) => u.email));
+        const newUsers = [];
+        const newStudents = [];
+
+        studentData.forEach((s) => {
+            if (!existingEmails.has(s.email)) {
+                const userId = new mongoose.Types.ObjectId();
+                newUsers.push({
+                    _id: userId,
+                    fullname: s.name,
+                    email: s.email,
+                    password: hashedPassword,
+                    role: "student"
+                });
+
+                newStudents.push({
+                    user_id: userId,
+                    dept: dept_id,
+                    roll_no: s.rollNo,
+                    academic_year: s.year,
+                    classSection: s.classSection,
+                });
+            }
+        })
+
+        if (newUsers.length === 0) {
+            return res.status(200).json(
+                new ApiResponse(200, { duplicates: existingUsers.length }, "All students already exists")
+            )
+        }
+
+        await User.insertMany(newUsers, { session });
+        const student = await Student.insertMany(newStudents, { session });
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json(
+            new ApiResponse(200, { student, duplicates: existingUsers.length }, "successfully added students")
+        )   
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log("Failed to add student", error);
+        throw new ApiError(500, "Failed to add students");
+    }
 });
 
 export const addFaculty = asyncHandler(async (req, res) => {

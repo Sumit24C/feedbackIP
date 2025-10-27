@@ -11,9 +11,11 @@
 
 import { Router } from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
-import { loginUser, logoutUser } from "../controllers/user.controller.js";
+import { addStudents, createDepartment } from "../controllers/admin.controller.js";
+import { upload } from "../middlewares/multer.middleware.js";
 const router = Router();
-router.route("/login").post(loginUser);
-router.route("/logout").get(verifyJWT, logoutUser);
+router.use(verifyJWT);
+router.route("/").post(createDepartment);
+router.route("/add-students/:dept_id").post(upload.single('student'), addStudents);
 
 export default router;
