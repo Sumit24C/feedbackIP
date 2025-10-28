@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const adminSchema = new mongoose.Schema({
     user_id: {
@@ -10,7 +11,7 @@ const adminSchema = new mongoose.Schema({
         type: String,
     }
 }, { timestamps: true })
-
+adminSchema.plugin(mongooseAggregatePaginate);
 const Admin = mongoose.model("Admin", adminSchema);
 
 export { Admin };

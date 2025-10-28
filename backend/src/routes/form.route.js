@@ -1,19 +1,11 @@
-// import { Router } from "express"
-// import { verifyJWT } from "../middlewares/auth.middleware.js"
-// import { createForm } from "../controllers/form.controller.js"
-// import { verifyRole } from "../middlewares/role.middleware.js";
-
-// const routes = Router();
-// routes.use(verifyJWT, verifyRole("faculty"));
-// routes.post("/", createForm);
-
-// export default routes;
-
 import { Router } from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
-import { loginUser, logoutUser } from "../controllers/user.controller.js";
+import { verifyRole } from "../middlewares/role.middleware.js"
+import { createForm, createQuestionTemplate, deleteForm, getFormsByDept, updateForm } from "../controllers/form.controller.js";
 const router = Router();
-router.route("/login").post(loginUser);
-router.route("/logout").get(verifyJWT, logoutUser);
+router.use(verifyJWT, verifyRole("admin", "faculty"));
+router.route("/:dept_id").post(createForm).get(getFormsByDept);
+router.route("/q/:dept_id").post(createQuestionTemplate);
+router.route("/:form_id").put(updateForm).delete(deleteForm);
 
 export default router;

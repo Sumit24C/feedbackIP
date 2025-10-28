@@ -6,14 +6,14 @@ const questionSchema = new mongoose.Schema({
         trim: true,
         required: true,
     },
+    questionType: {
+        type: String,
+        enum: ["rating", "yes/no", "text"],
+        required: true
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Faculty"
-    },
-    formType: {
-        type: String,
-        enum: ["practical", "theory", "infrastructure"],
-        required: true
     },
 }, { timestamps: true })
 

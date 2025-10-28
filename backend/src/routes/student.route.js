@@ -1,19 +1,8 @@
-// import { Router } from "express"
-// import { verifyJWT } from "../middlewares/auth.middleware.js"
-// import { submitResponse } from "../controllers/student.controller.js"
-// import { verifyRole } from "../middlewares/role.middleware.js";
-
-// const routes = Router();
-// routes.use(verifyJWT, verifyRole("student"));
-// routes.post("/", submitResponse);
-
-// export default routes;
-
 import { Router } from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
-import { loginUser, logoutUser } from "../controllers/user.controller.js";
+import { getForm, submitResponse } from "../controllers/student.controller.js";
 const router = Router();
-router.route("/login").post(loginUser);
-router.route("/logout").get(verifyJWT, logoutUser);
+router.use(verifyJWT);
+router.route("/:form_id").get(getForm).post(submitResponse);
 
 export default router;
