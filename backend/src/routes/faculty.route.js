@@ -1,19 +1,15 @@
-// import { Router } from "express"
-// import { verifyJWT } from "../middlewares/auth.middleware.js"
-// import { getFeedbackResult } from "../controllers/faculty.controller.js"
-// import { verifyRole } from "../middlewares/role.middleware.js";
-
-// const routes = Router();
-// routes.use(verifyJWT, verifyRole("faculty"));
-// routes.get("/feedback-result", getFeedbackResult);
-
-// export default routes;
-
 import { Router } from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
-import { loginUser, logoutUser } from "../controllers/user.controller.js";
+import { verifyRole } from "../middlewares/role.middleware.js"
+import { getForm, submitResponse } from "../controllers/student.controller.js";
+import { getAllQuestionTemplates, getFeedbackResultBySubjects, getOverallFeedbackResult, getQuestionTemplateById, getSubjectMapping } from "../controllers/faculty.controller.js";
+
 const router = Router();
-router.route("/login").post(loginUser);
-router.route("/logout").get(verifyJWT, logoutUser);
+router.use(verifyJWT, verifyRole("faculty"));
+router.route("/").get(getSubjectMapping);
+router.route("/overall-result/:form_id").get(getOverallFeedbackResult);
+router.route("/s/:form_id/:subject_mapping_id").get(getFeedbackResultBySubjects);
+router.route("/q/:dept_id").get(getAllQuestionTemplates);
+router.route("/q/:dept_id/:question_template_id").get(getQuestionTemplateById);
 
 export default router;

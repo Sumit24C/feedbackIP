@@ -241,6 +241,7 @@ export const addFaculty = asyncHandler(async (req, res) => {
                     classSection: faculty.classSection,
                     subject: faculty.subjectName,
                     formType: faculty.formType,
+                    year: faculty.year
                 })
             }
         });

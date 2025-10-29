@@ -8,6 +8,7 @@ import { Response } from "../models/response.model.js"
 import { Faculty } from "../models/faculty.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
+import { getStudentYear } from "../utils/getStudentYear.js"
 
 export const getForm = asyncHandler(async (req, res) => {
     // Input: form_id, student_id,subjectMappingId, responses: [{q_id: answer}}]
@@ -51,11 +52,13 @@ export const getForm = asyncHandler(async (req, res) => {
             new ApiResponse(200, {}, "Form is expired")
         );
     };
-
+    const studentYear = getStudentYear(student);
+    console.log(studentYear);
     const facultiesSubject = await FacultySubject.find({
         dept: new mongoose.Types.ObjectId(form.dept),
         classSection: studentClassSection,
         formType: form.formType,
+        year: studentYear
     }).populate("faculty", "name");
 
     if (!facultiesSubject || facultiesSubject.length === 0) {

@@ -22,6 +22,11 @@ const facultySubjectSchema = new mongoose.Schema({
         enum: ["theory", "practical"],
         default: "theory"
     },
+    year: {
+        type: String,
+        enum: ["FY", "SY", "TY", "BY"],
+        required: true
+    }
 }, { timestamps: true })
 
 const FacultySubject = mongoose.model("FacultySubject", facultySubjectSchema);
