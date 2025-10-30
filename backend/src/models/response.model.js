@@ -3,7 +3,7 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const responseSchema = new mongoose.Schema({
     form: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "FeedbackForm",
+        ref: "Form",
     },
     student: {
         type: mongoose.Schema.Types.ObjectId,

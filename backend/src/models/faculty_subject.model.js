@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const facultySubjectSchema = new mongoose.Schema({
     faculty: {
         type: mongoose.Schema.Types.ObjectId,
@@ -28,7 +28,7 @@ const facultySubjectSchema = new mongoose.Schema({
         required: true
     }
 }, { timestamps: true })
-
+facultySubjectSchema.plugin(mongooseAggregatePaginate);
 const FacultySubject = mongoose.model("FacultySubject", facultySubjectSchema);
 
 export { FacultySubject };

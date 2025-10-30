@@ -6,13 +6,16 @@ import { Department } from "../models/department.model.js"
 import { Question } from "../models/question.model.js";
 import { Form } from "../models/form.model.js";
 import { QuestionTemplate } from "../models/question_template.model.js";
+import { Faculty } from "../models/faculty.model.js";
+import { Response } from "../models/response.model.js";
 
 export const createQuestionTemplate = asyncHandler(async (req, res) => {
-    const { dept_id } = req.params;
-    if (!dept_id) {
-        throw new ApiError(403, "DepartmentId is required");
+    const faculty = await Faculty.findOne({ user_id: req.user._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
     }
-    const department = await Department.findById(dept_id);
+
+    const department = await Department.findById(faculty.dept);
     if (!department) {
         throw new ApiError(404, "Department not found");
     }
@@ -66,12 +69,12 @@ export const createForm = asyncHandler(async (req, res) => {
     // 3. Create Form document linking deptId, questions, formType, deadline
     // 4. Return created form
 
-    const { dept_id } = req.params;
-    if (!dept_id) {
-        throw new ApiError(403, "DepartmentId is required");
+    const faculty = await Faculty.findOne({ user_id: req.user._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
     }
 
-    const department = await Department.findById(dept_id);
+    const department = await Department.findById(faculty.dept);
     if (!department) {
         throw new ApiError(404, "Department not found");
     }
@@ -101,7 +104,7 @@ export const createForm = asyncHandler(async (req, res) => {
         formType,
         deadline,
         questions: questionsId,
-        dept: dept_id,
+        dept: faculty.dept,
         createdBy: req.user._id,
     });
 
@@ -111,6 +114,28 @@ export const createForm = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new ApiResponse(200, createdForm, "successfully created form")
+    );
+});
+
+export const getFormById = asyncHandler(async (req, res) => {
+    const { form_id } = req.params;
+
+    if (!form_id) {
+        throw new ApiError(400, "form_id is required");
+    }
+
+    const form = await Form.findById(form_id)
+        .populate({
+            path: "questions",
+            select: "questionText questionType"
+        });
+
+    if (!form) {
+        throw new ApiError(404, "Form not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, form, "Form fetched successfully")
     );
 });
 
@@ -189,6 +214,8 @@ export const deleteForm = asyncHandler(async (req, res) => {
     }
 
     await Form.findByIdAndDelete(form._id);
+    await Response.deleteMany({ form: form_id });
+
     return res.status(200).json(
         new ApiResponse(200, {}, "successfully deleted form")
     );
@@ -199,12 +226,12 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
     // 1. Fetch all subjects for the faculty
     // 2. Aggregate results by subjectMappingId / question
     // 3. Return summary (average ratings, counts, etc.)
-    const { dept_id } = req.params;
-    if (!dept_id) {
-        throw new ApiError(403, "DeptId is required");
+    const faculty = await Faculty.findOne({ user_id: req.user._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
     }
 
-    const department = await Department.findById(dept_id);
+    const department = await Department.findById(faculty.dept);
     if (!department) {
         throw new ApiError(404, "Department not found");
     };
@@ -212,7 +239,7 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
     const forms = await Form.aggregate([
         {
             $match: {
-                dept: new mongoose.Types.ObjectId(dept_id)
+                dept: new mongoose.Types.ObjectId(faculty.dept)
             }
         },
         {
@@ -225,7 +252,21 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
-                responseCount: { $size: "$responses" }
+                // ✅ extract unique student IDs from responses
+                uniqueStudents: {
+                    $size: {
+                        $setUnion: [
+                            {
+                                $map: {
+                                    input: "$responses",
+                                    as: "r",
+                                    in: "$$r.student"  // <-- pick student field
+                                }
+                            },
+                            []
+                        ]
+                    }
+                }
             }
         },
         {
@@ -233,14 +274,15 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
                 title: 1,
                 deadline: 1,
                 formType: 1,
-                responseCount: 1,
+                responseCount: "$uniqueStudents", // ✅ replace count
                 createdAt: 1
             }
         },
         {
             $sort: { createdAt: -1 }
         }
-    ])
+    ]);
+
 
     if (!forms.length) {
         throw new ApiError(500, "Failed to fetch forms");

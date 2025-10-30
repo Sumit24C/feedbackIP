@@ -23,6 +23,20 @@ const studentSchema = new mongoose.Schema({
     },
 }, { timestamps: true })
 
+studentSchema.pre("deleteMany", async function (next) {
+    const filter = this.getFilter();
+
+    const students = await mongoose.model("Student").find(filter);
+
+    const userIds = students.map((s) => s.user_id);
+
+    if (userIds.length > 0) {
+        await mongoose.model("User").deleteMany({ _id: { $in: userIds } });
+    }
+
+    next();
+});
+
 const Student = mongoose.model("Student", studentSchema);
 
 export { Student };

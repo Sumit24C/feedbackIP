@@ -35,33 +35,51 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
 
         { $unwind: "$responses" },
 
+        // ✅ Convert answer string → number so avg works
         {
-            $group: {
-                _id: "$subjectMapping", // subjectMappingId
-                avgRating: { $avg: "$responses.answer" },
-                totalResponses: { $sum: 1 }
+            $addFields: {
+                "responses.answer": {
+                    $convert: {
+                        input: "$responses.answer",
+                        to: "double",
+                        onError: null,
+                        onNull: null
+                    }
+                }
             }
         },
 
+        // ✅ Lookup subjectMapping to get classSection
         {
             $lookup: {
-                from: "facultysubjects",   // ✅ Correct collection name
-                localField: "_id",
+                from: "facultysubjects",
+                localField: "subjectMapping",
                 foreignField: "_id",
                 as: "subject"
             }
         },
         { $unwind: "$subject" },
 
+        // ✅ Group by classSection instead of subjectMapping
+        {
+            $group: {
+                _id: "$subject.classSection",
+                avgRating: { $avg: "$responses.answer" },
+                totalResponses: { $sum: 1 }
+            }
+        },
+
         {
             $project: {
-                subjectMappingId: "$_id",
-                subjectName: "$subject.subject",
-                classSection: "$subject.classSection",
-                formType: "$subject.formType",
+                classSection: "$_id",
                 avgRating: 1,
-                totalResponses: 1
+                totalResponses: 1,
+                _id: 0
             }
+        },
+
+        {
+            $sort: { classSection: 1 }
         }
     ]);
 
@@ -96,16 +114,29 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
     if (!subjectMapping) {
         throw new ApiError(404, "subjectMapping not found");
     }
-
     const subjectQuestionSummary = await Response.aggregate([
         {
             $match: {
                 form: new mongoose.Types.ObjectId(form_id),
-                subjectMapping: new mongoose.Types.ObjectId(subject_mapping_id)
+                subjectMapping: new mongoose.Types.ObjectId(subject_mapping_id),
             }
         },
 
         { $unwind: "$responses" },
+
+        // ✅ FIX: convert string to number
+        {
+            $addFields: {
+                "responses.answer": {
+                    $convert: {
+                        input: "$responses.answer",
+                        to: "double",
+                        onError: null,
+                        onNull: null
+                    }
+                }
+            }
+        },
 
         {
             $group: {
@@ -114,7 +145,6 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
                 totalResponses: { $sum: 1 }
             }
         },
-
         {
             $lookup: {
                 from: "questions",
@@ -124,11 +154,10 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
             }
         },
         { $unwind: "$question" },
-
         {
             $project: {
                 questionId: "$question._id",
-                questionText: "$question.text",
+                questionText: "$question.questionText",
                 avgRating: 1,
                 totalResponses: 1
             }
@@ -152,8 +181,12 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
     }
-
-    const subjectMappings = await FacultySubject.find({ faculty: faculty._id }).populate("dept");
+    const { form_id } = req.params;
+    const form = await Form.findById(form_id);
+    if (!form) {
+        throw new ApiError(404, "Form not found");
+    }
+    const subjectMappings = await FacultySubject.find({ faculty: faculty._id, formType: form.formType }).populate("dept");
     if (subjectMappings.length === 0) {
         return res.status(200).json(
             new ApiResponse(200, [], "No subjects assigned to this faculty")
@@ -169,12 +202,16 @@ export const getAllQuestionTemplates = asyncHandler(async (req, res) => {
     // Input: get all questions for practical/theory
     // 1. Fetch all questions
     // 3. Return question
-    const { dept_id } = req.params;
-    if (!dept_id) {
-        throw new ApiError(403, "Department Id is required");
-    };
+    // const { dept_id } = req.params;
+    // if (!dept_id) {
+    //     throw new ApiError(403, "Department Id is required");
+    // };
+    const faculty = await Faculty.findOne({ user_id: req.user._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
+    }
 
-    const department = await Department.findById(dept_id);
+    const department = await Department.findById(faculty.dept);
     if (!department) {
         throw new ApiError(404, "Department not found");
     };
@@ -193,12 +230,14 @@ export const getQuestionTemplateById = asyncHandler(async (req, res) => {
     // Input: get all questions for practical/theory
     // 1. Fetch all questions
     // 3. Return question
-    const { dept_id, question_template_id } = req.params;
-    if (!dept_id) {
-        throw new ApiError(403, "Department Id is required");
-    };
+    const { question_template_id } = req.params;
 
-    const department = await Department.findById(dept_id);
+    const faculty = await Faculty.findOne({ user_id: req.user._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
+    }
+
+    const department = await Department.findById(faculty.dept);
     if (!department) {
         throw new ApiError(404, "Department not found");
     };

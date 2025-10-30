@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
+import jwt from "jsonwebtoken"
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -38,12 +39,16 @@ export const registerAdmin = asyncHandler(async (req, res) => {
 
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+
+    await user.save({ validateBeforeSave: false });
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
     return res.status(200)
         .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
         .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
         .json(
-            new ApiResponse(200, {}, "successfully login")
+            new ApiResponse(200, { admin: loggedInUser }, "successfully register")
         );
 });
 
@@ -66,16 +71,27 @@ export const loginUser = asyncHandler(async (req, res) => {
 
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
+    user.refreshToken = refreshToken;
 
+    await user.save({ validateBeforeSave: false });
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
     return res.status(200)
         .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
         .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
         .json(
-            new ApiResponse(200, {}, "successfully login")
+            new ApiResponse(200, { user: loggedInUser }, "successfully login")
         )
 });
 
 export const logoutUser = asyncHandler(async (req, res) => {
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $unset: { refreshToken: 1 }
+        }, {
+        new: true
+    })
+
     return res.status(200)
         .clearCookie("accessToken", { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
         .clearCookie("refreshToken", { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
@@ -100,4 +116,33 @@ export const updatePassword = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new ApiResponse(200, updatedUser, "updated password successfully")
     );
+});
+
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    if (!incomingRefreshToken) {
+        throw new ApiError(401, "unauthorized request")
+    }
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+    const user = await User.findById(decodedToken?._id).select("-password");
+    if (!user) {
+        throw new ApiError(401, "invalid refresh token")
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+        throw new ApiError(401, "Refresh token is expired or used")
+    }
+
+    const accessToken = await user.generateAccessToken()
+
+    res.status(200)
+        .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
+        .json(new ApiResponse(200, { user }, "Access token refreshed"))
+
+});
+
+export const getCurrentUser = asyncHandler(async (req, res) => {
+    const user = req.user
+    return res.status(200)
+        .json(new ApiResponse(200, user, "current user fetched successfully"))
 });

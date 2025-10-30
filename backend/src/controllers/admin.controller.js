@@ -11,32 +11,164 @@ import bcrypt from "bcrypt";
 import { excelToJson } from "../utils/excelToJson.js";
 import { Faculty } from "../models/faculty.model.js";
 import { FacultySubject } from "../models/faculty_subject.model.js";
+import { Form } from "../models/form.model.js";
+import { Response } from "../models/response.model.js";
 
 export const createDepartment = asyncHandler(async (req, res) => {
-    // Input: dept_name
-    // 1. Validate dept_name
-    // 2. Check if department already exists
-    // 3. Create new department document
-    // 4. Return department info
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const { dept_name } = req.body;
-    if (!dept_name) {
-        throw new ApiError(401, "Department name is required");
+    try {
+        const { dept_name } = req.body;
+        const studentFile = req.files?.students?.[0];
+        const facultyFile = req.files?.faculties?.[0];
+
+        if (!dept_name) throw new ApiError(401, "Department name is required");
+        if (!studentFile) throw new ApiError(401, "Student Excel File Required");
+        if (!facultyFile) throw new ApiError(401, "Faculty Excel File Required");
+
+        // ✅ Step 1: Create Department
+        const existed = await Department.findOne({ name: dept_name });
+        if (existed) throw new ApiError(409, "Department already exists");
+
+        const department = await Department.create({ name: dept_name });
+
+        // ✅ Step 2: Convert Excel
+        const studentData = await excelToJson(studentFile);
+        const facultyData = await excelToJson(facultyFile);
+
+        // ✅ Step 3: Add Students
+        const hashedStudentPass = await bcrypt.hash("student123", 10);
+        const studentEmails = studentData.map(s => s.email);
+        const existingStu = await User.find({ email: { $in: studentEmails } });
+        const existStuEmails = new Set(existingStu.map(e => e.email));
+
+        const newUsers = [];
+        const newStudents = [];
+
+        console.log(studentData);
+        studentData.forEach(s => {
+            if (!existStuEmails.has(s.email)) {
+                const uid = new mongoose.Types.ObjectId();
+                newUsers.push({
+                    _id: uid,
+                    fullname: s.name,
+                    email: s.email,
+                    password: hashedStudentPass,
+                    role: "student"
+                });
+
+                newStudents.push({
+                    user_id: uid,
+                    dept: department._id,
+                    roll_no: s.roll_no,
+                    academic_year: s.year,
+                    classSection: s.classSection
+                });
+            }
+        });
+        console.log(newUsers);
+
+        // ✅ Step 4: Add Faculties
+        const hashedFacultyPass = await bcrypt.hash("faculty123", 10);
+        const facultyEmails = facultyData.map(s => s.email.toLowerCase());
+
+        // users already in DB
+        const existingFac = await User.find({ email: { $in: facultyEmails } });
+
+        const existFacEmails = new Map();   // email → faculty._id
+        existingFac.forEach(u => {
+            existFacEmails.set(u.email.toLowerCase(), u._id);
+        });
+
+        const newFacUsers = [];
+        const newFaculties = [];
+        const subjects = [];
+
+        const uploadEmailToFacultyId = new Map(); // ✅ Track emails within this upload
+
+        facultyData.forEach(f => {
+            const email = f.email.toLowerCase();
+
+            let facultyUserId;
+
+            // ✅ CASE 1: Already exists in DB
+            if (existFacEmails.has(email)) {
+                facultyUserId = existFacEmails.get(email);
+            }
+            // ✅ CASE 2: First time in this upload — create new User + Faculty
+            else if (!uploadEmailToFacultyId.has(email)) {
+                const uid = new mongoose.Types.ObjectId();
+                const fid = new mongoose.Types.ObjectId();
+
+                newFacUsers.push({
+                    _id: uid,
+                    fullname: f.name,
+                    email,
+                    password: hashedFacultyPass,
+                    role: "faculty",
+                });
+
+                newFaculties.push({
+                    _id: fid,
+                    user_id: uid,
+                    dept: department._id,
+                    isHod: f.isHod,
+                });
+
+                // ✅ store so next time we find same email, we reuse fid
+                uploadEmailToFacultyId.set(email, fid);
+                facultyUserId = uid;
+            }
+            // ✅ CASE 3: Duplicate in upload — user already created in this batch
+            else {
+                facultyUserId = uploadEmailToFacultyId.get(email);
+            }
+
+            // subject must always be added
+            subjects.push({
+                faculty: facultyUserId,
+                dept: department._id,
+                classSection: f.classSection,
+                subject: f.subjectName,
+                formType: f.formType,
+                year: f.year,
+            });
+        });
+
+        // ✅ DB insert
+        await User.insertMany(newFacUsers, { session });
+        await User.insertMany(newUsers, { session });
+        await Student.insertMany(newStudents, { session });
+        const insertedFaculties = await Faculty.insertMany(newFaculties, { session });
+
+        // ✅ After insert, update map: DB user → faculty id
+        insertedFaculties.forEach(f => {
+            existFacEmails.set(f.email, f._id);
+        });
+
+        await FacultySubject.insertMany(subjects, { session });
+
+        const hod = insertedFaculties.find((f) => f.isHOD === true);
+        const updatedDepartment = await Department.findByIdAndUpdate(
+            department._id,
+            { $set: { hod: hod?._id || null } },
+            { new: true, session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json(
+            new ApiResponse(200, { updatedDepartment }, "✅ Department, Students, Faculties Added Successfully")
+        );
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log("Failed Full Creation:", error);
+        throw new ApiError(500, "Failed to create department with full data");
     }
-
-    const existedDepartment = await Department.findOne({ name: dept_name });
-
-    if (existedDepartment) {
-        throw new ApiError(409, "Department already exists");
-    }
-
-    const department = await Department.create({
-        name: dept_name
-    });
-
-    return res.status(200).json(
-        new ApiResponse(200, department, "Department created successfully")
-    );
 });
 
 export const editDepartment = asyncHandler(async (req, res) => {
@@ -83,13 +215,62 @@ export const editDepartment = asyncHandler(async (req, res) => {
 });
 
 export const getDepartments = asyncHandler(async (req, res) => {
-    // 1. Validate dept exists
-    // 3. Return all dept
+    const departments = await Department.aggregate([
 
-    const departments = await Department.find();
-    if (!departments) {
-        throw new ApiError(500, "Failed to fetch departments");
-    }
+        {
+            $lookup: {
+                from: "students",
+                localField: "_id",
+                foreignField: "dept",
+                as: "students",
+            }
+        },
+        {
+            $lookup: {
+                from: "faculties",
+                localField: "_id",
+                foreignField: "dept",
+                as: "faculties",
+            }
+        },
+        {
+            $addFields: {
+                hodDetails: {
+                    $first: {
+                        $filter: {
+                            input: "$faculties",
+                            as: "fac",
+                            cond: { $eq: ["$$fac.isHod", true] }
+                        }
+                    }
+                }
+            }
+        },
+        // ✅ Lookup HOD user
+        {
+            $lookup: {
+                from: "users",
+                localField: "hodDetails.user_id",
+                foreignField: "_id",
+                as: "hodUser",
+            }
+        },
+        // ✅ Final response formatting
+        {
+            $project: {
+                name: 1,
+                studentCount: { $size: "$students" },
+                facultyCount: { $size: "$faculties" },
+                hod: {
+                    $ifNull: [
+                        { $arrayElemAt: ["$hodUser.fullname", 0] },
+                        "Not Assigned"
+                    ]
+                }
+            }
+        }
+
+    ]);
 
     return res.status(200).json(
         new ApiResponse(200, departments, "successfully fetched departments")
@@ -109,7 +290,6 @@ export const addStudents = asyncHandler(async (req, res) => {
     if (!dept_id) {
         throw new ApiError(403, "DepartmentId is required");
     }
-
     const department = await Department.findById(dept_id);
     if (!department) {
         throw new ApiError(404, "Department not found");
@@ -279,6 +459,41 @@ export const getDepartmentById = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
+                from: "students",
+                localField: "_id",
+                foreignField: "dept",
+                as: "students",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            user: { $arrayElemAt: ["$user", 0] }
+                        }
+                    },
+                    {
+                        $project: {
+                            roll_no: 1,
+                            academic_year: 1,
+                            classSection: 1,
+                            "user.fullname": 1,
+                            "user.email": 1
+                        }
+                    },
+                ]
+            }
+        },
+        {
+            $sort: { roll_no: 1 }
+        },
+        {
+            $lookup: {
                 from: "faculties",
                 localField: "_id",
                 foreignField: "dept",
@@ -286,23 +501,44 @@ export const getDepartmentById = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            user: { $arrayElemAt: ["$user", 0] }
+                        }
+                    },
+                    {
+                        $lookup: {
                             from: "facultysubjects",
                             localField: "_id",
                             foreignField: "faculty",
                             as: "facultysubjects"
                         }
+                    },
+                    {
+                        $project: {
+                            isHOD: 1,
+                            "user.fullname": 1,
+                            "user.email": 1,
+                            facultysubjects: 1
+                        }
                     }
                 ]
             }
-        },
+        }
     ]);
 
-    if (!department) {
+
+    if (department.length === 0) {
         throw new ApiError(404, "Department not found");
     }
-
     return res.status(200).json(
-        new ApiResponse(200, department, "successfull fetched department")
+        new ApiResponse(200, department[0], "successfull fetched department")
     );
 });
 
@@ -334,4 +570,39 @@ export const getFacultyByDept = asyncHandler(async (req, res) => {
     // 3. Return faculties
 
 
+});
+
+export const deleteDepartment = asyncHandler(async (req, res) => {
+    const { dept_id } = req.params;
+    if (!dept_id) {
+        throw new ApiError(400, "Department id is required");
+    }
+
+    const dept = await Department.findById(dept_id);
+    if (!dept) {
+        throw new ApiError(404, "Department not found");
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        await Department.findByIdAndDelete(dept_id, { session })
+        await Form.deleteMany({ dept: dept_id }, { session })
+        await FacultySubject.deleteMany({ dept: dept_id }, { session })
+        await Faculty.deleteMany({ dept: dept_id }, { session })
+        await Student.deleteMany({ dept: dept_id }, { session })
+        await Response.deleteMany({ dept: dept_id }, { session })
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json(
+            new ApiResponse(200, {}, "Successfully deleted department and all related data")
+        );
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw new ApiError(500, "Something went wrong while deleting");
+    }
 });

@@ -26,6 +26,9 @@ const userSchema = new mongoose.Schema({
         enum: ["student", "faculty", "admin"],
         default: "student",
     },
+    refreshToken: {
+        type: String,
+    },
 }, { timestamps: true })
 
 userSchema.pre("save", async function (next) {
