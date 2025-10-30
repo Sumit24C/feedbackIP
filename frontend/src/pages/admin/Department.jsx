@@ -26,11 +26,11 @@ function Department() {
         } finally {
             setLoading(false);
         }
-    };
-
+    };  
     useEffect(() => {
         fetchDepartment();
     }, [dept_id]);
+    console.log(dept)
 
     {
         uploading && (
@@ -64,7 +64,6 @@ function Department() {
 
         try {
             const res = await axiosPrivate.post(`/admin/add-students/${dept_id}`, formData);
-            console.log(res.data);
             toast.success(res.data.message);
             setOpenStudentModal(false);
             fetchDepartment();

@@ -16,7 +16,7 @@ function AuthLayout({ authenticated = false }) {
             navigate('/login', { state: { from: location.pathname }, replace: true })
         } else if (authenticated && status) {
             if (userData?.role === "admin" && location.pathname === "/") {
-                navigate("/admin/dashboard", { replace: true })
+                navigate("/admin/department", { replace: true })
             }
             if (userData?.role === "faculty" && location.pathname === "/") {
                 navigate(`/faculty/all-forms`, { replace: true })

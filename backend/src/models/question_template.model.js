@@ -18,6 +18,10 @@ const questionTemplateSchema = new mongoose.Schema({
         enum: ["practical", "theory", "infrastructure"],
         required: true
     },
+    name: {
+        type: String,
+        required: true
+    }
 }, { timestamps: true });
 
 const QuestionTemplate = mongoose.model("QuestionTemplate", questionTemplateSchema);

@@ -13,17 +13,18 @@ function DepartmentList() {
   const [openMenu, setOpenMenu] = useState(null);
   const menuRef = useRef(null);
 
+  const fetchDepartment = async () => {
+    try {
+      const res = await axiosPrivate.get("/admin");
+      setDepartments(res.data.data);
+    } catch (err) {
+      toast.error("Failed to load departments");
+    } finally {
+      setLoading(false);
+    }
+  }
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await axiosPrivate.get("/admin");
-        setDepartments(res.data.data);
-      } catch (err) {
-        toast.error("Failed to load departments");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchDepartment();
   }, []);
   console.log(departments)
 
@@ -43,15 +44,24 @@ function DepartmentList() {
 
     try {
       await axiosPrivate.delete(`/admin/${id}`);
-      setDepartments((prev) => prev.filter((d) => d._id !== id));
+      await fetchDepartment();
+      // setDepartments((prev) => prev.filter((d) => d._id !== id));
       toast.success("Department deleted");
     } catch (err) {
       toast.error("Failed to delete");
     }
   };
 
-  if (loading) return <div className="p-6 text-lg font-medium">Loading departments...</div>;
-
+  if (loading) {
+    return (
+      <div className="w-full h-[70vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-gray-400 border-t-black rounded-full animate-spin" />
+          <p className="text-gray-700 font-semibold">Loading departments...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="p-6">
       <h2 className="text-3xl font-semibold mb-6">Departments</h2>

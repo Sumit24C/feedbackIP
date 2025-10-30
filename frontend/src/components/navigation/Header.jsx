@@ -27,16 +27,16 @@ function Header() {
     const navigate = useNavigate();
     const navItemsByRole = {
         admin: [
-            { path: "/admin/dashboard", name: "Dashboard" },
             { path: "/admin/create-department", name: "Create Department" },
             { path: "/admin/department", name: "Departments" },
         ],
         faculty: [
             { path: "/faculty/all-forms", name: "All Forms" },
             { path: "/faculty/create-form", name: "Create Form" },
+            { path: "/faculty/questions", name: "Questions" },
+            { path: "/faculty/create-question-template", name: "Create Questions" },
         ],
         student: [
-            // { path: "/student/dashboard", name: "Dashboard" },
             { path: "/student/forms", name: "Feedback Form" },
         ],
     };
@@ -109,7 +109,7 @@ function Header() {
                             <DropdownMenuSeparator />
 
                             <DropdownMenuItem asChild>
-                                <Link to="/profile" className="w-full">
+                                <Link to={`/${userData?.role}/profile`} className="w-full">
                                     Profile
                                 </Link>
                             </DropdownMenuItem>

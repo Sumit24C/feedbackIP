@@ -36,7 +36,7 @@ export const createDepartment = asyncHandler(async (req, res) => {
         // ✅ Step 2: Convert Excel
         const studentData = await excelToJson(studentFile);
         const facultyData = await excelToJson(facultyFile);
-
+        console.log("faculty: ", facultyData);
         // ✅ Step 3: Add Students
         const hashedStudentPass = await bcrypt.hash("student123", 10);
         const studentEmails = studentData.map(s => s.email);
@@ -67,18 +67,18 @@ export const createDepartment = asyncHandler(async (req, res) => {
                 });
             }
         });
-        console.log(newUsers);
+        console.log("users: ",newUsers);
 
         // ✅ Step 4: Add Faculties
         const hashedFacultyPass = await bcrypt.hash("faculty123", 10);
-        const facultyEmails = facultyData.map(s => s.email.toLowerCase());
+        const facultyEmails = facultyData.map(s => s.email);
 
         // users already in DB
         const existingFac = await User.find({ email: { $in: facultyEmails } });
 
         const existFacEmails = new Map();   // email → faculty._id
         existingFac.forEach(u => {
-            existFacEmails.set(u.email.toLowerCase(), u._id);
+            existFacEmails.set(u.email, u._id);
         });
 
         const newFacUsers = [];
@@ -88,7 +88,7 @@ export const createDepartment = asyncHandler(async (req, res) => {
         const uploadEmailToFacultyId = new Map(); // ✅ Track emails within this upload
 
         facultyData.forEach(f => {
-            const email = f.email.toLowerCase();
+            const email = f.email;
 
             let facultyUserId;
 
@@ -146,7 +146,7 @@ export const createDepartment = asyncHandler(async (req, res) => {
         insertedFaculties.forEach(f => {
             existFacEmails.set(f.email, f._id);
         });
-
+        console.log("subjects: ",subjects);
         await FacultySubject.insertMany(subjects, { session });
 
         const hod = insertedFaculties.find((f) => f.isHOD === true);
@@ -216,7 +216,6 @@ export const editDepartment = asyncHandler(async (req, res) => {
 
 export const getDepartments = asyncHandler(async (req, res) => {
     const departments = await Department.aggregate([
-
         {
             $lookup: {
                 from: "students",
@@ -246,7 +245,6 @@ export const getDepartments = asyncHandler(async (req, res) => {
                 }
             }
         },
-        // ✅ Lookup HOD user
         {
             $lookup: {
                 from: "users",
@@ -254,8 +252,7 @@ export const getDepartments = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "hodUser",
             }
-        },
-        // ✅ Final response formatting
+        },  
         {
             $project: {
                 name: 1,
@@ -603,6 +600,7 @@ export const deleteDepartment = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
+        console.error("deleteDepartment :: error :: ", error)
         throw new ApiError(500, "Something went wrong while deleting");
     }
 });

@@ -24,11 +24,28 @@ const formSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Question"
     }],
-    deadline:{
+    deadline: {
         type: Date,
         required: true
     },
 }, { timestamps: true })
+
+formSchema.pre("deleteMany", async function (next) {
+    try {
+        const filter = this.getFilter();
+        const forms = await mongoose.model("Form").find(filter);
+
+        const quesIds = forms.flatMap((form) => form.questions);
+
+        if (quesIds.length > 0) {
+            await mongoose.model("Question").deleteMany({ _id: { $in: quesIds } });
+        }
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
+
 
 const Form = mongoose.model("Form", formSchema);
 

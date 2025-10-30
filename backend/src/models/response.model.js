@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const responseSchema = new mongoose.Schema({
+    dept: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Department",
+    },
     form: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Form",

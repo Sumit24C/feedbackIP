@@ -197,10 +197,11 @@ export const submitResponse = asyncHandler(async (req, res) => {
     };
 
     const responseDocs = subjects.map((s) => ({
+        dept: student.dept,
         form: form._id,
         student: student._id,
         subjectMapping: s.subjectMappingId,
-        responses: s.responses
+        responses: s.responses,
     }));
 
     const savedResponses = await Response.insertMany(responseDocs);

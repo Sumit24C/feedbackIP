@@ -9,6 +9,7 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
 import { Faculty } from "../models/faculty.model.js"
+import { Question } from "../models/question.model.js"
 
 export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
     // Input: form_id
@@ -255,6 +256,31 @@ export const getQuestionTemplateById = asyncHandler(async (req, res) => {
         new ApiResponse(200, questionTemplate, "successfully fetched question template")
     );
 });
+
+export const deleteQuestionTemplateById = asyncHandler(async (req, res) => {
+    // Input: get all questions for practical/theory
+    // 1. Fetch all questions
+    // 3. Return question
+    const { question_template_id } = req.params;
+
+    if (!question_template_id) {
+        throw new ApiError(403, "Department Id is required");
+    }
+    const quesTemp = await QuestionTemplate.findById(question_template_id);
+    if (!quesTemp) {
+        throw new ApiError(404, "QuestionTemplate not found");
+    }
+    const quesId = quesTemp.question.map((q) => q._id);
+
+    await QuestionTemplate.findByIdAndDelete(question_template_id);
+    await Question.deleteMany({_id: quesId});
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "successfully deleted question template")
+    );
+});
+
+
 
 export const getAllFacultyResultsForHOD = asyncHandler(async (req, res) => {
     const { form_id } = req.params;

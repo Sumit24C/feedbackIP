@@ -19,11 +19,11 @@ export const createQuestionTemplate = asyncHandler(async (req, res) => {
     if (!department) {
         throw new ApiError(404, "Department not found");
     }
-    const { questions, formType } = req.body;
+    const { questions, formType, name } = req.body;
 
     console.log("form:", formType);
-    if (!formType) {
-        throw new ApiError(403, "Form type is required");
+    if (!formType || !name) {
+        throw new ApiError(403, "Form type and Name is required");
     }
 
     if (!questions || !Array.isArray(questions) || questions.length === 0) {
@@ -47,6 +47,7 @@ export const createQuestionTemplate = asyncHandler(async (req, res) => {
     const createdQuestionsId = createdQuestions.map((q) => q._id);
 
     const createdQuestionTemplate = await QuestionTemplate.create({
+        name: name,
         question: createdQuestionsId,
         formType: formType,
         createdBy: req.user._id,

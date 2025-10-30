@@ -2,7 +2,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
+import { Student } from "../models/student.model.js"
+import { FacultySubject } from "../models/faculty_subject.model.js"
 import jwt from "jsonwebtoken"
+import { Faculty } from "../models/faculty.model.js";
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -110,11 +113,11 @@ export const updatePassword = asyncHandler(async (req, res) => {
     if (!isPasswordCorrect) {
         throw new ApiError(403, "Invalid password");
     }
-    user.password = password;
+    user.password = newPassword;
     await user.save({ validateBeforeSave: false });
 
     return res.status(200).json(
-        new ApiResponse(200, updatedUser, "updated password successfully")
+        new ApiResponse(200, {}, "updated password successfully")
     );
 });
 
@@ -146,3 +149,18 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     return res.status(200)
         .json(new ApiResponse(200, user, "current user fetched successfully"))
 });
+export const getProfileInfo = asyncHandler(async (req, res) => {
+    const userRole = req.user.role;
+    let user;
+
+    if (userRole === "student") {
+        user = await Student.findOne({ user_id: req.user._id });
+    } else if (userRole === "faculty") {
+        const faculty = await Faculty.findOne({user_id: req.user._id});
+        user = await FacultySubject.findOne({ faculty: faculty._id }).populate("dept").populate("faculty");
+    }
+
+    return res.status(200)
+        .json(new ApiResponse(200, user, "user info fetched successfully"))
+});
+
