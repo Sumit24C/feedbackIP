@@ -38,7 +38,7 @@ function FeedbackForm() {
   const handleBulkRating = (subjectId, value) => {
     setResponses((prev) => {
       const updated = { ...(prev[subjectId] || {}) };
-      formData.questions.forEach((q) => {
+      formData?.questions.forEach((q) => {
         updated[q.questionId] = value;
       });
       return { ...prev, [subjectId]: updated };
@@ -46,8 +46,8 @@ function FeedbackForm() {
   };
 
   const isFormComplete = () => {
-    return formData.subjects.every((sub) =>
-      formData.questions.every((q) =>
+    return formData?.subjects.every((sub) =>
+      formData?.questions.every((q) =>
         responses[sub.subjectMappingId]?.[q.questionId]
       )
     );
@@ -61,7 +61,7 @@ function FeedbackForm() {
         return;
       }
 
-      const subjectsPayload = formData.subjects.map((sub) => ({
+      const subjectsPayload = formData?.subjects.map((sub) => ({
         subjectMappingId: sub.subjectMappingId,
         responses: Object.entries(responses[sub.subjectMappingId] || {}).map(
           ([qId, ans]) => ({
@@ -100,7 +100,7 @@ function FeedbackForm() {
       </div>
     );
 
-  if (formData.status === "submitted") {
+  if (formData?.status === "submitted") {
     return (
       <div className="text-center p-10 font-medium text-green-700">
         Feedback already submitted 🎉
@@ -108,24 +108,24 @@ function FeedbackForm() {
     );
   }
 
-  const expired = new Date(formData.deadline) < new Date();
+  const expired = new Date(formData?.deadline) < new Date();
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center">
       <div className="max-w-5xl w-full bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
 
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">{formData.title}</h2>
+          <h2 className="text-3xl font-bold text-gray-900">{formData?.title}</h2>
           <p
             className={`text-sm mt-1 font-medium ${expired ? "text-red-600" : "text-gray-600"
               }`}
           >
-            Deadline: {new Date(formData.deadline).toLocaleDateString()}
+            Deadline: {new Date(formData?.deadline).toLocaleDateString()}
           </p>
         </div>
 
         <div className="space-y-10">
-          {formData.subjects.map((sub) => (
+          {formData?.subjects.map((sub) => (
             <div key={sub.subjectMappingId} className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <div>
@@ -162,7 +162,7 @@ function FeedbackForm() {
                 </thead>
 
                 <tbody>
-                  {formData.questions.map((q) => (
+                  {formData?.questions.map((q) => (
                     <tr
                       key={q.questionId}
                       className="border-b last:border-none hover:bg-gray-50 transition"

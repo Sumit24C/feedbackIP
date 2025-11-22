@@ -52,6 +52,7 @@ function Department() {
             </div>
         );
     }
+    
     if (!dept) return <div className="p-6">Department not found</div>;
 
     const hod = dept.faculties.find((f) => f.isHOD);
