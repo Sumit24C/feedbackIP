@@ -10,7 +10,7 @@ import { Faculty } from "../models/faculty.model.js";
 const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict"
+    sameSite: process.env.NODE_ENV === "production" ? 'None' : 'Lax',
 }
 
 const accessTokenExpiry = parseInt(process.env.ACCESS_TOKEN_EXPIRY);
@@ -156,7 +156,7 @@ export const getProfileInfo = asyncHandler(async (req, res) => {
     if (userRole === "student") {
         user = await Student.findOne({ user_id: req.user._id });
     } else if (userRole === "faculty") {
-        const faculty = await Faculty.findOne({user_id: req.user._id});
+        const faculty = await Faculty.findOne({ user_id: req.user._id });
         user = await FacultySubject.findOne({ faculty: faculty._id }).populate("dept").populate("faculty");
     }
 
