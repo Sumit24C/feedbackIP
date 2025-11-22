@@ -20,10 +20,13 @@ import adminRoutes from "./routes/admin.route.js";
 import facultyRoutes from "./routes/faculty.route.js";
 import studentRoutes from "./routes/student.route.js";
 import formRoutes from "./routes/form.route.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/form", formRoutes);
+
+app.use(errorHandler)
 export { app }
