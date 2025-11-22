@@ -38,7 +38,6 @@ export default function FeedbackFormList() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
-      {/* Heading */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">
           Feedback Forms
@@ -64,7 +63,6 @@ export default function FeedbackFormList() {
               key={form.formId}
               className="border rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200"
             >
-              {/* Top Row */}
               <div className="flex justify-between items-center gap-3">
                 <h2 className="text-lg font-semibold text-gray-800">
                   {form.title}
@@ -82,8 +80,6 @@ export default function FeedbackFormList() {
                   {submitted ? "Submitted" : expired ? "Expired" : "Pending"}
                 </span>
               </div>
-
-              {/* Deadline */}
               <p className="mt-1 text-sm text-gray-700">
                 Deadline:{" "}
                 <span className="font-medium">
@@ -91,7 +87,6 @@ export default function FeedbackFormList() {
                 </span>
               </p>
 
-              {/* Button */}
               {!submitted && !expired && (
                 <button
                   onClick={() => navigate(`/student/form/${form.formId}`)}

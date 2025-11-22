@@ -71,7 +71,6 @@ function Header() {
         transition-colors duration-300
       "
     >
-      {/* Logo */}
       <div className="flex items-center gap-3">
         <div
           className="
@@ -98,7 +97,6 @@ function Header() {
         </Link>
       </div>
 
-      {/* Navigation */}
       <div className="flex items-center gap-4">
         <NavigationMenu>
           <NavigationMenuList className="flex gap-2">
@@ -124,7 +122,6 @@ function Header() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Avatar Dropdown */}
         {userData && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

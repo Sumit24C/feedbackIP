@@ -44,7 +44,6 @@ function DepartmentList() {
     try {
       await axiosPrivate.delete(`/admin/${id}`);
       await fetchDepartment();
-      // setDepartments((prev) => prev.filter((d) => d._id !== id));
       toast.success("Department deleted");
     } catch (err) {
       toast.error("Failed to delete");

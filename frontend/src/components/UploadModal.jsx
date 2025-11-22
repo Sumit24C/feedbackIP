@@ -3,7 +3,7 @@ import React, { useState } from "react";
 function UploadModal({ isOpen, onClose, onUpload }) {
   const [file, setFile] = useState(null);
 
-  if (!isOpen) return null; // ✅ Hide modal when closed
+  if (!isOpen) return null; 
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">

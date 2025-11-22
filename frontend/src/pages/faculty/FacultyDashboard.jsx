@@ -18,12 +18,9 @@ const Dashboard = () => {
 
   return (
     <div className="flex justify-center gap-6 p-8 min-h-[90vh]">
-
-      {/* ✅ Simplified Sidebar */}
       <div className="w-56 p-5 rounded-xl shadow-lg h-fit bg-white border border-gray-200">
         <h3 className="text-lg font-bold mb-4 text-blue-700">Dashboard</h3>
 
-        {/* ✅ Overall Button (active highlight) */}
         <div
           onClick={() => navigate(`/faculty/dashboard/${form_id}`)}
           className={`p-3 rounded-md cursor-pointer mb-3 transition-all text-sm font-medium
@@ -36,8 +33,6 @@ const Dashboard = () => {
         </div>
 
         <hr className="my-3" />
-
-        {/* ✅ Subject List */}
         <h4 className="text-xs uppercase text-gray-500 mb-2">Subjects</h4>
 
         {subjects.map((sub) => {
@@ -62,8 +57,6 @@ const Dashboard = () => {
           );
         })}
       </div>
-
-      {/* ✅ Main Content */}
       <div className="w-[70%] max-w-4xl rounded-2xl shadow-xl p-6 bg-white">
         <Outlet />
       </div>

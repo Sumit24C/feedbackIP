@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { Loader2 } from "lucide-react";
 
 function CreateFeedbackForm() {
-  const { form_id } = useParams();   // ✅ Read form_id for edit mode
+  const { form_id } = useParams();
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
 
@@ -16,8 +17,9 @@ function CreateFeedbackForm() {
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [loadingForm, setLoadingForm] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const today = new Date().toISOString().split("T")[0];
 
-  // ✅ Load templates from backend
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
@@ -33,7 +35,6 @@ function CreateFeedbackForm() {
     fetchTemplates();
   }, [form_id]);
 
-  // ✅ If EDIT mode, load form details
   useEffect(() => {
     if (!form_id) return;
 
@@ -47,11 +48,10 @@ function CreateFeedbackForm() {
         setFormType(form.formType);
         setDeadline(form.deadline?.split("T")[0]);
 
-        // ✅ Combine template and custom questions into UI format
         const formattedQuestions = form.questions.map((q) => ({
           questionText: q.questionText,
           questionType: q.questionType,
-          questionId: q._id,       
+          questionId: q._id,
         }));
 
         setQuestions(formattedQuestions);
@@ -65,21 +65,19 @@ function CreateFeedbackForm() {
     fetchForm();
   }, [form_id]);
 
-  // ✅ Add custom manually-entered question
   const handleAddQuestion = () => {
     if (!newQuestion.trim()) return toast.error("Question cannot be empty");
     setQuestions([...questions, { questionText: newQuestion }]);
     setNewQuestion("");
   };
 
-  // ✅ Add ALL questions from selected template
   const handleAddTemplate = (template) => {
     if (!template?.question || template.question.length === 0)
       return toast.error("Template has no questions");
 
     const newQuestions = template.question.map((q) => ({
       questionText: q.questionText,
-      questionId: q._id,           // ✅ store real question ID
+      questionId: q._id,
       questionType: q.questionType || "rating",
     }));
 
@@ -87,18 +85,16 @@ function CreateFeedbackForm() {
   };
 
 
-  // ✅ Remove question
   const removeQuestion = (index) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  // ✅ Submit form (Create or Edit)
   const handleSubmit = async () => {
     if (!title || !formType || !deadline || questions.length === 0) {
       return toast.error("Please fill all fields & add at least 1 question");
     }
+    setSubmitLoading(true)
 
-    // NEW custom questions (no questionId)
     const customQuestions = questions
       .filter((q) => !q.questionId)
       .map((q) => ({
@@ -106,7 +102,6 @@ function CreateFeedbackForm() {
         questionType: q.questionType || "rating",
       }));
 
-    // Pre-existing template questions (with questionId)
     const existingQuestionIds = questions
       .filter((q) => q.questionId)
       .map((q) => q.questionId);
@@ -128,12 +123,15 @@ function CreateFeedbackForm() {
         toast.success("Form created successfully");
       }
 
-      navigate(-1);
+      navigate("/faculty/all-forms");
     } catch (e) {
       toast.error(e?.response?.data?.message || "Failed to save form");
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
+  const formMode = form_id ? "update" : "create";
 
   if (loadingForm) return <div className="p-4">Loading form...</div>;
 
@@ -143,7 +141,6 @@ function CreateFeedbackForm() {
         {form_id ? "✏️ Edit Feedback Form" : "Create Feedback Form"}
       </h1>
 
-      {/* Title */}
       <div>
         <label className="block font-medium">Form Title</label>
         <input
@@ -153,8 +150,6 @@ function CreateFeedbackForm() {
           className="w-full border p-2 rounded mt-1"
         />
       </div>
-
-      {/* Type */}
       <div>
         <label className="block font-medium">Form Type</label>
         <select
@@ -168,7 +163,6 @@ function CreateFeedbackForm() {
         </select>
       </div>
 
-      {/* Deadline */}
       <div>
         <label className="block font-medium">Deadline</label>
         <input
@@ -176,10 +170,10 @@ function CreateFeedbackForm() {
           className="w-full border p-2 rounded mt-1"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
+          min={today}
         />
       </div>
 
-      {/* Add Questions */}
       <div className="border p-4 rounded space-y-3">
         <label className="font-medium">Add Custom Question</label>
         <div className="flex gap-2">
@@ -198,7 +192,6 @@ function CreateFeedbackForm() {
         </div>
       </div>
 
-      {/* Templates */}
       <div className="border p-4 rounded space-y-3">
         <h2 className="font-medium mb-2">Use Question Templates</h2>
 
@@ -225,8 +218,6 @@ function CreateFeedbackForm() {
           ))
         )}
       </div>
-
-      {/* Question List */}
       <div className="border p-4 rounded">
         <h2 className="font-medium mb-3">Questions Added</h2>
 
@@ -252,10 +243,19 @@ function CreateFeedbackForm() {
 
       <button
         onClick={handleSubmit}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded"
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded flex items-center justify-center gap-2"
+        disabled={submitLoading}
       >
-        {form_id ? "✅ Update Form" : "✅ Create Form"}
+        {submitLoading ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            {formMode === "create" ? "Creating..." : "Updating..."}
+          </>
+        ) : (
+          formMode === "create" ? "Create Form" : "Update Form"
+        )}
       </button>
+
     </div>
   );
 }

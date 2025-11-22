@@ -32,7 +32,6 @@ const OverallSummary = () => {
       .catch(() => setLoading(false));
   }, [form_id]);
 
-  // ✅ Use classSection & avgRating
   const labels = graphData.map((item) => item.classSection);
   const values = graphData.map((item) => Number(item.avgRating) || 0);
 

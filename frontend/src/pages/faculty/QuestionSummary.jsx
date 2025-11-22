@@ -19,7 +19,7 @@ const QuestionSummary = () => {
 
   const [graphData, setGraphData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState("chart"); // ✅ chart | table
+  const [tab, setTab] = useState("chart");
 
   useEffect(() => {
     fetchQuestionData();
@@ -53,12 +53,10 @@ const QuestionSummary = () => {
   return (
     <div className="flex flex-col items-center justify-start w-full">
 
-      {/* ✅ Title */}
       <h2 className="text-xl font-semibold mb-4 text-black">
         Question-wise Feedback Summary
       </h2>
 
-      {/* ✅ Tabs */}
       <div className="flex gap-4 mb-6">
         <button
           onClick={() => setTab("chart")}
@@ -80,14 +78,11 @@ const QuestionSummary = () => {
           Question List
         </button>
       </div>
-
-      {/* ✅ Content */}
       {loading ? (
         <p className="text-gray-700 animate-pulse">Loading chart...</p>
       ) : graphData.length === 0 ? (
         <p className="text-gray-500">No question data available</p>
       ) : tab === "chart" ? (
-        // ✅ CHART TAB
         <div className="w-[80%]">
           <Bar
             data={chartData}
@@ -101,7 +96,6 @@ const QuestionSummary = () => {
           />
         </div>
       ) : (
-        // ✅ TABLE TAB
         <div className="w-[90%]">
           <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
             <thead className="bg-blue-500 text-white">

@@ -69,7 +69,6 @@ function StudentProfilePage() {
       {loading && <p className="text-blue-600 text-center">Loading...</p>}
       {errMsg && <p className="text-red-500 text-sm text-center">{errMsg}</p>}
 
-      {/* Profile Card */}
       <Card className="shadow-md border-blue-200">
         <CardHeader>
           <CardTitle className="text-lg">Profile Information</CardTitle>
@@ -93,7 +92,6 @@ function StudentProfilePage() {
         </div>
       </Card>
 
-      {/* Update Password Form */}
       {showPasswordForm && (
         <Card className="shadow border-green-200">
           <CardHeader>

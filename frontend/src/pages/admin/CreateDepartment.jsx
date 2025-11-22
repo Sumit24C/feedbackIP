@@ -52,15 +52,12 @@ export default function CreateDepartment() {
     <div className="min-h-screen flex justify-center items-start mt-10 bg-gradient-to-br from-blue-50 to-blue-100 p-6">
       <Card className="w-[480px] bg-white shadow-2xl rounded-3xl border-none">
 
-        {/* Card Header */}
           <CardTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
             <Building2 size={24} /> Create Department
           </CardTitle>
 
-        {/* Content */}
         <CardContent className="space-y-5 py-6">
 
-          {/* Department Name */}
           <div className="space-y-1">
             <label className="text-gray-700 font-medium">Department Name</label>
             <Input
@@ -71,7 +68,6 @@ export default function CreateDepartment() {
             />
           </div>
 
-          {/* Student File Upload */}
           <div className="space-y-1">
             <label className="text-gray-700 font-medium flex items-center gap-2">
               <Upload size={18} /> Upload Students Excel
@@ -87,7 +83,6 @@ export default function CreateDepartment() {
             </p>
           </div>
 
-          {/* Faculty File Upload */}
           <div className="space-y-1">
             <label className="text-gray-700 font-medium flex items-center gap-2">
               <Upload size={18} /> Upload Faculty Excel
@@ -103,7 +98,6 @@ export default function CreateDepartment() {
             </p>
           </div>
 
-          {/* Submit Button */}
           <Button
             disabled={loading}
             onClick={handleSubmit}

@@ -61,7 +61,6 @@ export default function Login() {
 
           <form onSubmit={handleSubmit(submit)} className="space-y-5">
 
-            {/* Email */}
             <div className="space-y-1">
               <Label className="text-gray-800 font-semibold">Email</Label>
               <div className="relative">
@@ -78,7 +77,6 @@ export default function Login() {
               )}
             </div>
 
-            {/* Password */}
             <div className="space-y-1">
               <Label className="text-gray-800 font-semibold">Password</Label>
               <div className="relative">

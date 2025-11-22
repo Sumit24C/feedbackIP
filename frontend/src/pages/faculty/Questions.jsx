@@ -45,7 +45,6 @@ function Questions() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      {/* Header Section */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-3xl font-bold tracking-wide text-gray-800">
           Question Templates
@@ -82,7 +81,6 @@ function Questions() {
                 hover:-translate-y-1 duration-300
               "
             >
-              {/* Template Title */}
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {template.name || "Untitled Template"}
@@ -104,7 +102,6 @@ function Questions() {
                 Dept: {template.dept?.name || template.dept}
               </p>
 
-              {/* Question List */}
               <div className="mt-4">
                 <p className="font-medium text-gray-700 mb-2">
                   Questions ({template.question.length})
@@ -130,7 +127,6 @@ function Questions() {
                 </div>
               </div>
 
-              {/* Buttons */}
               <div className="flex justify-end gap-3 mt-5">
                 <Button
                   variant="destructive"

@@ -89,8 +89,6 @@ function FacultyProfilePage() {
           </Button>
         </div>
       </Card>
-
-      {/* Update Password Form */}
       {showPasswordForm && (
         <Card className="shadow border-green-200 animate-in slide-in-from-top duration-200">
           <CardHeader>

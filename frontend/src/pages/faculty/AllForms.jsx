@@ -38,7 +38,6 @@ function AllForms() {
     }
   };
 
-  // Close menu when clicking outside
   useEffect(() => {
     const close = () => setOpenMenu(null);
     window.addEventListener("click", close);
@@ -70,7 +69,6 @@ function AllForms() {
               className={`border p-4 rounded shadow-sm bg-white hover:shadow-md transition relative ${isExpired ? "border-red-500 bg-red-50" : "border-gray-300"
                 }`}
             >
-              {/* MENU BUTTON */}
               <div
                 className="absolute top-3 right-3 cursor-pointer p-1"
                 onClick={(e) => {
@@ -81,7 +79,6 @@ function AllForms() {
                 ⋮
               </div>
 
-              {/* MENU DROPDOWN */}
               {openMenu === form._id && (
                 <div
                   className="absolute top-10 right-3 bg-white border shadow-md rounded text-sm w-28 z-50"
@@ -114,7 +111,6 @@ function AllForms() {
                 </div>
               )}
 
-              {/* ✅ CARD CONTENT — Not clickable */}
               <div>
                 <div className="flex justify-between items-center mb-1 pr-8">
                   <h2
@@ -124,7 +120,6 @@ function AllForms() {
                     {form.title}
                   </h2>
 
-                  {/* ✅ Moved Badge Away from Menu */}
                   <span
                     className={`text-xs px-2 py-1 rounded whitespace-nowrap ${isExpired
                         ? "bg-red-200 text-red-700"

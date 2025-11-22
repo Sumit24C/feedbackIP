@@ -64,7 +64,6 @@ function CreateQuesTemplate() {
             >
                 <h2 className="text-2xl font-bold text-gray-700">Create Question Template</h2>
 
-                {/* Template Name */}
                 <div>
                     <label className="block font-semibold text-gray-700 mb-1">
                         Template Name
@@ -78,8 +77,6 @@ function CreateQuesTemplate() {
                         required
                     />
                 </div>
-
-                {/* Form Type */}
                 <div>
                     <label className="font-semibold text-gray-700">Form Type:</label>
                     <select
@@ -92,7 +89,6 @@ function CreateQuesTemplate() {
                     </select>
                 </div>
 
-                {/* Questions List */}
                 <div className="space-y-4">
                     <h3 className="font-semibold text-gray-700">Questions:</h3>
 
