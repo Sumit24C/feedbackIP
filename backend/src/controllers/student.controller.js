@@ -32,7 +32,7 @@ export const getFormById = asyncHandler(async (req, res) => {
     let studentClassSection = student.classSection;
     if (form.formType === "practical") {
         studentClassSection = student.roll_no <= 36 ? `${studentClassSection}1` : `${studentClassSection}2`;
-    }
+    }   
 
     const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });
     if (existingResponse) {
@@ -46,6 +46,10 @@ export const getFormById = asyncHandler(async (req, res) => {
         );
     };
     const studentYear = getStudentYear(student);
+    console.log(form.formType)
+    console.log(studentClassSection)
+    console.log(studentYear)
+    console.log(form.dept)
     const facultiesSubject = await FacultySubject.aggregate([
         {
             $match: {

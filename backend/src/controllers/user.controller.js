@@ -153,7 +153,7 @@ export const getProfileInfo = asyncHandler(async (req, res) => {
     let user;
 
     if (userRole === "student") {
-        user = await Student.findOne({ user_id: req.user._id });
+        user = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
     } else if (userRole === "faculty") {
         const faculty = await Faculty.findOne({ user_id: req.user._id });
         user = await FacultySubject.findOne({ faculty: faculty._id }).populate("dept").populate("faculty");
