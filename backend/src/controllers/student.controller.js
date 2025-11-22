@@ -11,13 +11,6 @@ import { FacultySubject } from "../models/faculty_subject.model.js"
 import { getStudentYear } from "../utils/getStudentYear.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
-    // Input: form_id, student_id,subjectMappingId, responses: [{q_id: answer}}]
-    // 1. Validate form exists and is active
-    // 2. Validate student exists
-    // 3. Check if student already submitted for same subjectMappingId
-    // 4. Create Response documents for each subjectMappingId
-    // 5. Return success message
-
     const { form_id } = req.params;
     if (!form_id) {
         throw new ApiError(403, "Form Id is required");
@@ -53,10 +46,6 @@ export const getFormById = asyncHandler(async (req, res) => {
         );
     };
     const studentYear = getStudentYear(student);
-    console.log(studentYear);
-    console.log(form.dept);
-    console.log(form.formType);
-    console.log(studentClassSection);
     const facultiesSubject = await FacultySubject.aggregate([
         {
             $match: {
@@ -96,7 +85,6 @@ export const getFormById = asyncHandler(async (req, res) => {
         }
     ]);
 
-    console.log("faculty", facultiesSubject);
     if (!facultiesSubject || facultiesSubject.length === 0) {
         throw new ApiError(500, "No faculty subjects found for this form");
     }
@@ -157,13 +145,6 @@ export const getForms = asyncHandler(async (req, res) => {
 });
 
 export const submitResponse = asyncHandler(async (req, res) => {
-    // Input: form_id, student_id,subjectMappingId, responses: [{q_id: answer}}]
-    // 1. Validate form exists and is active
-    // 2. Validate student exists
-    // 3. Check if student already submitted for same subjectMappingId
-    // 4. Create Response documents for each subjectMappingId
-    // 5. Return success message
-
     const { form_id } = req.params;
     const { subjects } = req.body;
 

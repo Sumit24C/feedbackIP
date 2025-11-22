@@ -27,17 +27,13 @@ export const createDepartment = asyncHandler(async (req, res) => {
         if (!studentFile) throw new ApiError(401, "Student Excel File Required");
         if (!facultyFile) throw new ApiError(401, "Faculty Excel File Required");
 
-        // ✅ Step 1: Create Department
         const existed = await Department.findOne({ name: dept_name });
         if (existed) throw new ApiError(409, "Department already exists");
 
         const department = await Department.create({ name: dept_name });
 
-        // ✅ Step 2: Convert Excel
         const studentData = await excelToJson(studentFile);
         const facultyData = await excelToJson(facultyFile);
-        console.log("faculty: ", facultyData);
-        // ✅ Step 3: Add Students
         const hashedStudentPass = await bcrypt.hash("student123", 10);
         const studentEmails = studentData.map(s => s.email);
         const existingStu = await User.find({ email: { $in: studentEmails } });
@@ -46,7 +42,6 @@ export const createDepartment = asyncHandler(async (req, res) => {
         const newUsers = [];
         const newStudents = [];
 
-        console.log(studentData);
         studentData.forEach(s => {
             if (!existStuEmails.has(s.email)) {
                 const uid = new mongoose.Types.ObjectId();
@@ -67,16 +62,12 @@ export const createDepartment = asyncHandler(async (req, res) => {
                 });
             }
         });
-        console.log("users: ",newUsers);
-
-        // ✅ Step 4: Add Faculties
         const hashedFacultyPass = await bcrypt.hash("faculty123", 10);
         const facultyEmails = facultyData.map(s => s.email);
 
-        // users already in DB
         const existingFac = await User.find({ email: { $in: facultyEmails } });
 
-        const existFacEmails = new Map();   // email → faculty._id
+        const existFacEmails = new Map(); 
         existingFac.forEach(u => {
             existFacEmails.set(u.email, u._id);
         });
@@ -85,18 +76,16 @@ export const createDepartment = asyncHandler(async (req, res) => {
         const newFaculties = [];
         const subjects = [];
 
-        const uploadEmailToFacultyId = new Map(); // ✅ Track emails within this upload
+        const uploadEmailToFacultyId = new Map(); 
 
         facultyData.forEach(f => {
             const email = f.email;
 
             let facultyUserId;
 
-            // ✅ CASE 1: Already exists in DB
             if (existFacEmails.has(email)) {
                 facultyUserId = existFacEmails.get(email);
             }
-            // ✅ CASE 2: First time in this upload — create new User + Faculty
             else if (!uploadEmailToFacultyId.has(email)) {
                 const uid = new mongoose.Types.ObjectId();
                 const fid = new mongoose.Types.ObjectId();
@@ -116,16 +105,13 @@ export const createDepartment = asyncHandler(async (req, res) => {
                     isHod: f.isHod,
                 });
 
-                // ✅ store so next time we find same email, we reuse fid
                 uploadEmailToFacultyId.set(email, fid);
                 facultyUserId = uid;
             }
-            // ✅ CASE 3: Duplicate in upload — user already created in this batch
             else {
                 facultyUserId = uploadEmailToFacultyId.get(email);
             }
 
-            // subject must always be added
             subjects.push({
                 faculty: facultyUserId,
                 dept: department._id,
@@ -136,17 +122,14 @@ export const createDepartment = asyncHandler(async (req, res) => {
             });
         });
 
-        // ✅ DB insert
         await User.insertMany(newFacUsers, { session });
         await User.insertMany(newUsers, { session });
         await Student.insertMany(newStudents, { session });
         const insertedFaculties = await Faculty.insertMany(newFaculties, { session });
 
-        // ✅ After insert, update map: DB user → faculty id
         insertedFaculties.forEach(f => {
             existFacEmails.set(f.email, f._id);
         });
-        console.log("subjects: ",subjects);
         await FacultySubject.insertMany(subjects, { session });
 
         const hod = insertedFaculties.find((f) => f.isHOD === true);
@@ -166,17 +149,12 @@ export const createDepartment = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.log("Failed Full Creation:", error);
+        console.error("Failed Full Creation:", error);
         throw new ApiError(500, "Failed to create department with full data");
     }
 });
 
 export const editDepartment = asyncHandler(async (req, res) => {
-    // Input: dept_id, fields to update
-    // 1. Validate dept exists
-    // 2. Update department fields
-    // 3. Return updated dept
-
     const { dept_id } = req.params;
     if (!dept_id) {
         throw new ApiError(403, "DepartmentId is required");
@@ -192,7 +170,6 @@ export const editDepartment = asyncHandler(async (req, res) => {
     if (!department) {
         throw new ApiError(404, "Department not found");
     }
-    console.log(typeof (department._id))
 
     const updatedDepartment = await Department.findByIdAndUpdate(
         department._id,
@@ -275,13 +252,6 @@ export const getDepartments = asyncHandler(async (req, res) => {
 });
 
 export const addStudents = asyncHandler(async (req, res) => {
-    // Input: dept_id, students: [{name, email, rollNo, classSection, year}]
-    // 1. Validate dept_id exists
-    // 2. Loop through each student:
-    //    a. Create User document with role 'student' and default password
-    //    b. Hash password
-    //    c. Create Student document linking userId and deptId
-    // 3. Return created students
 
     const { dept_id } = req.params;
     if (!dept_id) {
@@ -349,19 +319,12 @@ export const addStudents = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.log("Failed to add student", error);
+        console.error("Failed to add student", error);
         throw new ApiError(500, "Failed to add students");
     }
 });
 
 export const addFaculty = asyncHandler(async (req, res) => {
-    // Input: dept_id, faculty: [{name, email, isHod, classesSubjects: [{classSection, subjectName, formType}]}]
-    // 1. Validate dept_id exists
-    // 2. Loop through each faculty:
-    //    a. Create User document with role 'faculty' and default password
-    //    b. Create Faculty document linking userId and deptId
-    //    c. For each class/subject, create a subject_mapping document
-    // 3. Return created faculty
 
     const { dept_id } = req.params;
     if (!dept_id) {
@@ -379,7 +342,6 @@ export const addFaculty = asyncHandler(async (req, res) => {
     }
 
     const facultyData = await excelToJson(facultyFile);
-    console.log(facultyData);
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -404,7 +366,6 @@ export const addFaculty = asyncHandler(async (req, res) => {
                     password: hashedPassword,
                     role: "faculty",
                 });
-                console.log("isHod: ", faculty.isHod);
                 newFaculties.push({
                     _id: facultyId,
                     user_id: userId,
@@ -440,14 +401,12 @@ export const addFaculty = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.log("Failed to add faculty", error);
+        console.error("Failed to add faculty", error);
         throw new ApiError(500, "Failed to add faculty");
     }
 });
 
 export const getDepartmentById = asyncHandler(async (req, res) => {
-    // 1. Validate dept exists
-    // 3. Return dept
 
     const { dept_id } = req.params;
     const department = await Department.aggregate([
@@ -540,8 +499,6 @@ export const getDepartmentById = asyncHandler(async (req, res) => {
 });
 
 export const getStudentsByDept = asyncHandler(async (req, res) => {
-    // 1. Validate dept exists
-    // 3. Return students
     const { dept_id } = req.params;
     if (!dept_id) {
         throw new ApiError(403, "DepartmentId is required");
@@ -563,9 +520,6 @@ export const getStudentsByDept = asyncHandler(async (req, res) => {
 });
 
 export const getFacultyByDept = asyncHandler(async (req, res) => {
-    // 1. Validate dept exists
-    // 3. Return faculties
-
 
 });
 

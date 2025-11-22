@@ -21,7 +21,6 @@ export const createQuestionTemplate = asyncHandler(async (req, res) => {
     }
     const { questions, formType, name } = req.body;
 
-    console.log("form:", formType);
     if (!formType || !name) {
         throw new ApiError(403, "Form type and Name is required");
     }
@@ -62,14 +61,6 @@ export const createQuestionTemplate = asyncHandler(async (req, res) => {
 });
 
 export const createForm = asyncHandler(async (req, res) => {
-    // Input: dept_id, title, formType, deadline, questions: [{questionText, optional: createdBy}]
-    // 1. Validate dept exists
-    // 2. Loop through questions:
-    //    a. If new, create Question document
-    //    b. Collect questionIds
-    // 3. Create Form document linking deptId, questions, formType, deadline
-    // 4. Return created form
-
     const faculty = await Faculty.findOne({ user_id: req.user._id });
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
@@ -141,12 +132,6 @@ export const getFormById = asyncHandler(async (req, res) => {
 });
 
 export const updateForm = asyncHandler(async (req, res) => {
-    // Input: form_id, updated title, deadline, questions
-    // 1. Validate form exists
-    // 2. Add/remove questions as needed
-    // 3. Update other fields (title, deadline)
-    // 4. Return updated form
-
     const { form_id } = req.params;
     if (!form_id) {
         throw new ApiError(403, "FormId is required");
@@ -200,10 +185,6 @@ export const updateForm = asyncHandler(async (req, res) => {
 });
 
 export const deleteForm = asyncHandler(async (req, res) => {
-    // Input: form_id
-    // validate if the form exists
-    //delete the form
-
     const { form_id } = req.params;
     if (!form_id) {
         throw new ApiError(403, "FormId is required");
@@ -223,10 +204,6 @@ export const deleteForm = asyncHandler(async (req, res) => {
 });
 
 export const getFormsByDept = asyncHandler(async (req, res) => {
-    // Input: dept_id
-    // 1. Fetch all subjects for the faculty
-    // 2. Aggregate results by subjectMappingId / question
-    // 3. Return summary (average ratings, counts, etc.)
     const faculty = await Faculty.findOne({ user_id: req.user._id });
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
@@ -253,7 +230,6 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
-                // ✅ extract unique student IDs from responses
                 uniqueStudents: {
                     $size: {
                         $setUnion: [
@@ -261,7 +237,7 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
                                 $map: {
                                     input: "$responses",
                                     as: "r",
-                                    in: "$$r.student"  // <-- pick student field
+                                    in: "$$r.student"  
                                 }
                             },
                             []
@@ -275,7 +251,7 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
                 title: 1,
                 deadline: 1,
                 formType: 1,
-                responseCount: "$uniqueStudents", // ✅ replace count
+                responseCount: "$uniqueStudents", 
                 createdAt: 1
             }
         },

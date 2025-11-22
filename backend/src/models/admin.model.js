@@ -6,7 +6,6 @@ const adminSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
     },
-    //for future use case
     permission: {
         type: String,
     }

@@ -12,10 +12,6 @@ import { Faculty } from "../models/faculty.model.js"
 import { Question } from "../models/question.model.js"
 
 export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
-    // Input: form_id
-    // 1. Fetch all responses for the form
-    // 2. Aggregate results by subjectMappingId / question
-    // 3. Return summary (average ratings, counts, etc.)
 
     const { form_id } = req.params;
     if (!form_id) {
@@ -33,10 +29,7 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                 form: new mongoose.Types.ObjectId(form_id)
             }
         },
-
         { $unwind: "$responses" },
-
-        // ✅ Convert answer string → number so avg works
         {
             $addFields: {
                 "responses.answer": {
@@ -49,8 +42,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                 }
             }
         },
-
-        // ✅ Lookup subjectMapping to get classSection
         {
             $lookup: {
                 from: "facultysubjects",
@@ -60,8 +51,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
             }
         },
         { $unwind: "$subject" },
-
-        // ✅ Group by classSection instead of subjectMapping
         {
             $group: {
                 _id: "$subject.classSection",
@@ -124,8 +113,6 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
         },
 
         { $unwind: "$responses" },
-
-        // ✅ FIX: convert string to number
         {
             $addFields: {
                 "responses.answer": {
@@ -175,9 +162,6 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
 });
 
 export const getSubjectMapping = asyncHandler(async (req, res) => {
-    // Input: get all subjectMappings for practical/theory
-    // 1. Fetch all subjectMappings
-    // 3. Return subjectMappings
     const faculty = await Faculty.findOne({ user_id: req.user._id });
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
@@ -200,13 +184,6 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
 });
 
 export const getAllQuestionTemplates = asyncHandler(async (req, res) => {
-    // Input: get all questions for practical/theory
-    // 1. Fetch all questions
-    // 3. Return question
-    // const { dept_id } = req.params;
-    // if (!dept_id) {
-    //     throw new ApiError(403, "Department Id is required");
-    // };
     const faculty = await Faculty.findOne({ user_id: req.user._id });
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
@@ -228,9 +205,6 @@ export const getAllQuestionTemplates = asyncHandler(async (req, res) => {
 });
 
 export const getQuestionTemplateById = asyncHandler(async (req, res) => {
-    // Input: get all questions for practical/theory
-    // 1. Fetch all questions
-    // 3. Return question
     const { question_template_id } = req.params;
 
     const faculty = await Faculty.findOne({ user_id: req.user._id });
@@ -258,9 +232,6 @@ export const getQuestionTemplateById = asyncHandler(async (req, res) => {
 });
 
 export const deleteQuestionTemplateById = asyncHandler(async (req, res) => {
-    // Input: get all questions for practical/theory
-    // 1. Fetch all questions
-    // 3. Return question
     const { question_template_id } = req.params;
 
     if (!question_template_id) {
@@ -313,8 +284,6 @@ export const getAllFacultyResultsForHOD = asyncHandler(async (req, res) => {
                 totalResponses: { $sum: 1 }
             }
         },
-
-        // ✅ Lookup subject mapping
         {
             $lookup: {
                 from: "facultysubjects",
@@ -324,15 +293,11 @@ export const getAllFacultyResultsForHOD = asyncHandler(async (req, res) => {
             }
         },
         { $unwind: "$subject" },
-
-        // ✅ Only subjects from HOD's department
         {
             $match: {
                 "subject.dept": new mongoose.Types.ObjectId(hodDeptId)
             }
         },
-
-        // ✅ Lookup faculty details
         {
             $lookup: {
                 from: "faculties",

@@ -14,6 +14,7 @@ const facultySchema = new mongoose.Schema({
         default: false
     },
 }, { timestamps: true })
+
 facultySchema.pre("deleteMany", async function (next) {
     const filter = this.getFilter();
     const faculties = await mongoose.model("Faculty").find(filter);

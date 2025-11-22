@@ -17,7 +17,6 @@ const accessTokenExpiry = parseInt(process.env.ACCESS_TOKEN_EXPIRY);
 const refreshTokenExpiry = parseInt(process.env.REFRESH_TOKEN_EXPIRY);
 
 export const registerAdmin = asyncHandler(async (req, res) => {
-    console.log("success");
     const { fullname, email, password, role } = req.body;
 
     if ([fullname, email, password, role].some(
