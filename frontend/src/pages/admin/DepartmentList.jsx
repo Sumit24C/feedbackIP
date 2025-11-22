@@ -26,9 +26,8 @@ function DepartmentList() {
   useEffect(() => {
     fetchDepartment();
   }, []);
-  console.log(departments)
+  
 
-  // ✅ Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -41,7 +40,7 @@ function DepartmentList() {
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this department?")) return;
-
+    setLoading(true);
     try {
       await axiosPrivate.delete(`/admin/${id}`);
       await fetchDepartment();

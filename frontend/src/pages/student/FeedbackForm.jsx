@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { useParams, useNavigate } from "react-router-dom";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
+import { Loader2 } from "lucide-react";
 
 function FeedbackForm() {
   const { form_id } = useParams();
@@ -11,6 +12,7 @@ function FeedbackForm() {
   const [formData, setFormData] = useState(null);
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
     axios
@@ -52,6 +54,7 @@ function FeedbackForm() {
   };
 
   const handleSubmit = async () => {
+    setSubmitLoading(true);
     try {
       if (!isFormComplete()) {
         alert("Please rate all questions for all subjects.");
@@ -80,6 +83,8 @@ function FeedbackForm() {
       }
     } catch (error) {
       alert("Something went wrong while submitting.");
+    } finally {
+      setSubmitLoading(false)
     }
   };
 
@@ -88,6 +93,10 @@ function FeedbackForm() {
     return (
       <div className="flex flex-col justify-center items-center gap-4 mt-32">
         <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
+
+        <div className="text-indigo-600 font-medium text-lg animate-pulse tracking-wide">
+          Loading feedback forms...
+        </div>
       </div>
     );
 
@@ -194,14 +203,23 @@ function FeedbackForm() {
 
         <button
           onClick={handleSubmit}
-          disabled={!isFormComplete()}
-          className={`w-full mt-10 py-3 text-lg rounded-xl font-semibold transition ${isFormComplete()
-            ? "bg-blue-600 text-white hover:bg-blue-700"
-            : "bg-gray-300 text-gray-600 cursor-not-allowed"
+          disabled={!isFormComplete() || loading}
+          className={`w-full mt-10 py-3 text-lg rounded-xl font-semibold flex items-center justify-center gap-2 transition
+    ${isFormComplete() && !loading
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-gray-300 text-gray-600 cursor-not-allowed"
             }`}
         >
-          Submit Feedback
+          {submitLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            "Submit Feedback"
+          )}
         </button>
+
       </div>
     </div>
   );

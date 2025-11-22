@@ -4,8 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/store/authSlice";
 import { extractErrorMsg } from "@/utils/extractErrorMsg.js";
 import { api } from "@/api/api";
-import { User, Mail, LogOut, Settings } from "lucide-react";
-
+import { User, Mail, LogOut, Settings, Loader2 } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -168,15 +167,24 @@ function Header() {
                 </>
               )}
 
-
               <DropdownMenuItem
-                className="text-red-600 cursor-pointer font-semibold"
+                className="text-red-600 font-semibold focus:bg-red-50 dark:focus:bg-red-900 cursor-pointer gap-2 flex items-center"
                 onSelect={(e) => {
                   e.preventDefault();
                   handleLogout();
                 }}
               >
-                {loading ? "Signing out..." : "Sign Out"}
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Logging out...
+                  </span>
+                ) : (
+                  <>
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </>
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

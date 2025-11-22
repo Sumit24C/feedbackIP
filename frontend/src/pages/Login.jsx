@@ -95,18 +95,21 @@ export default function Login() {
               )}
             </div>
 
-            {/* Login Button */}
             <Button
-              className="w-full mt-2 bg-blue-700 hover:bg-blue-800 text-lg py-2 rounded-2xl shadow-md"
+              className="w-full mt-2 bg-blue-700 hover:bg-blue-800 text-lg py-2 rounded-2xl shadow-md flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               type="submit"
               disabled={loading}
             >
               {loading ? (
-                <div className="flex flex-col justify-center items-center gap-4 mt-32">
-                  <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
-                </div>
-              ) : "Login"}
+                <>
+                  <div className="w-5 h-5 border-3 border-transparent border-t-white rounded-full animate-spin"></div>
+                  <span>Logging in...</span>
+                </>
+              ) : (
+                "Login"
+              )}
             </Button>
+
           </form>
         </CardContent>
       </Card>
