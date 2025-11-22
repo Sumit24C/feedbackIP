@@ -13,7 +13,7 @@ const Dashboard = () => {
     axios
       .get(`/faculty/${form_id}`)
       .then((res) => setSubjects(res.data.data))
-      .catch((err) => console.log(err));
+      .catch((err) => console.error(err));
   }, []);
 
   return (

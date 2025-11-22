@@ -9,7 +9,7 @@ const useRefreshToken = () => {
             const response = await api.get('/user/refresh-token')
             return true
         } catch (error) {
-            console.log("refreshToken :: error :: ", error)
+            console.error("refreshToken :: error :: ", error)
             return null
         }
     }

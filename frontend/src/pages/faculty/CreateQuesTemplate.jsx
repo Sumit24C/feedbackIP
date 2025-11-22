@@ -48,7 +48,6 @@ function CreateQuesTemplate() {
             const res = await axiosPrivate.post("/form/q", payload);
             setMessage("Template Created Successfully ✅");
             navigate("/faculty/questions");
-            console.log(res.data);
         } catch (error) {
             console.error(error);
             setMessage("Failed to create template ❌");

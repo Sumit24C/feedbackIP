@@ -40,7 +40,6 @@ export default function CreateDepartment() {
       setStudentFile(null);
       setFacultyFile(null);
       const dept_id = res.data.data.updatedDepartment._id;
-      console.log(res.data.data);
       navigate(`/admin/department`);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to create department");

@@ -20,7 +20,7 @@ function FeedbackForm() {
       .then((res) => setFormData(res.data.data))
       .catch((err) => {
         alert(extractErrorMsg(err));
-        console.log(err);
+        console.error(err);
       })
       .finally(() => setLoading(false));
   }, []);

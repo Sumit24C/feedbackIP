@@ -17,7 +17,6 @@ function PersistLogin() {
                 await refresh()
                 const res = await axiosPrivate.get('/user/current-user')
                 dispatch(login(res.data.data))
-                console.log("user: ", res.data.data)
                 return res.data.data
             } catch (error) {
                 dispatch(logout());

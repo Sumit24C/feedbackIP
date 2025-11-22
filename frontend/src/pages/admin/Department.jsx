@@ -30,7 +30,6 @@ function Department() {
     useEffect(() => {
         fetchDepartment();
     }, [dept_id]);
-    console.log(dept)
 
     {
         uploading && (
@@ -117,13 +116,6 @@ function Department() {
                     >
                         ➕ Add Faculties
                     </button>
-
-                    {/* <button
-                        onClick={() => navigate(`/department/${dept_id}/edit`)}
-                        className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600"
-                    >
-                        ✏ Edit Department
-                    </button> */}
                 </div>
             </div>
 

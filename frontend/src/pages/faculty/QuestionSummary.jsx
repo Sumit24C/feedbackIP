@@ -38,7 +38,6 @@ const QuestionSummary = () => {
 
   const labels = graphData.map((item) => `Q-${item.questionId.slice(-4)}`);
   const values = graphData.map((item) => item.avgRating);
-  console.log(graphData)
   const chartData = {
     labels,
     datasets: [
