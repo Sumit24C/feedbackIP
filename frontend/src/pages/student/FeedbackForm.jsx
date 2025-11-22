@@ -18,11 +18,11 @@ function FeedbackForm() {
       .then((res) => setFormData(res.data.data))
       .catch((err) => {
         alert(extractErrorMsg(err));
-        console.log(err)
+        console.log(err);
       })
       .finally(() => setLoading(false));
   }, []);
-  console.log(formData);
+
   const handleRatingChange = (subjectId, questionId, value) => {
     setResponses((prev) => ({
       ...prev,
@@ -33,26 +33,20 @@ function FeedbackForm() {
     }));
   };
 
-  // ✅ Bulk rating
   const handleBulkRating = (subjectId, value) => {
     setResponses((prev) => {
       const updated = { ...(prev[subjectId] || {}) };
       formData.questions.forEach((q) => {
         updated[q.questionId] = value;
       });
-      return {
-        ...prev,
-        [subjectId]: updated,
-      };
+      return { ...prev, [subjectId]: updated };
     });
   };
 
-  // ✅ check all fields filled
   const isFormComplete = () => {
     return formData.subjects.every((sub) =>
       formData.questions.every((q) =>
-        responses[sub.subjectMappingId] &&
-        responses[sub.subjectMappingId][q.questionId]
+        responses[sub.subjectMappingId]?.[q.questionId]
       )
     );
   };
@@ -61,11 +55,6 @@ function FeedbackForm() {
     try {
       if (!isFormComplete()) {
         alert("Please rate all questions for all subjects.");
-        return;
-      }
-
-      if (!formData?.subjects?.length) {
-        alert("No subjects found!");
         return;
       }
 
@@ -79,9 +68,8 @@ function FeedbackForm() {
         ),
       }));
 
-      const res = await axios.post(
-        `/student/${form_id}`, {
-        subjects: subjectsPayload
+      const res = await axios.post(`/student/${form_id}`, {
+        subjects: subjectsPayload,
       });
 
       if (res.data?.message === "Form is expired") {
@@ -91,105 +79,126 @@ function FeedbackForm() {
         navigate("/student/forms");
       }
     } catch (error) {
-      if (error.response?.data?.message === "Response already submitted") {
-        alert("❌ You have already submitted this form.");
-      } else {
-        console.log(error);
-        alert("Something went wrong while submitting.");
-      }
+      alert("Something went wrong while submitting.");
     }
   };
 
-  if (loading) return <div className="text-center p-10">Loading...</div>;
+
+  if (loading)
+    return (
+      <div className="flex flex-col justify-center items-center gap-4 mt-32">
+        <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
+      </div>
+    );
+
   if (formData.status === "submitted") {
-    return <div className="text-center p-10">Already submitted</div>;
+    return (
+      <div className="text-center p-10 font-medium text-green-700">
+        Feedback already submitted 🎉
+      </div>
+    );
   }
 
+  const expired = new Date(formData.deadline) < new Date();
+
   return (
-    <div className="p-6 min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex flex-col items-center">
-      <div className="w-full max-w-4xl bg-white shadow-xl p-6 rounded-2xl border border-blue-200">
-        <h2 className="text-2xl font-bold text-blue-800 text-center">
-          {formData?.title || "Feedback Form"}
-        </h2>
-        <p className="text-sm text-blue-600 text-center mb-6">
-          Deadline: {new Date(formData?.deadline).toLocaleDateString()}
-        </p>
+    <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center">
+      <div className="max-w-5xl w-full bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
 
-        {formData?.subjects?.map((sub) => (
-          <div
-            key={sub.subjectMappingId}
-            className="mb-8 bg-gradient-to-r from-blue-800 to-blue-900 text-white p-4 rounded-lg shadow-lg"
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">{formData.title}</h2>
+          <p
+            className={`text-sm mt-1 font-medium ${expired ? "text-red-600" : "text-gray-600"
+              }`}
           >
-            <h3 className="text-lg font-semibold">
-              {sub.subject} &nbsp;•&nbsp; Faculty:{" "}
-              <span className="font-bold">{sub.facultyName}</span>
-            </h3>
+            Deadline: {new Date(formData.deadline).toLocaleDateString()}
+          </p>
+        </div>
 
-            {/* ✅ Bulk rating dropdown */}
-            <div className="flex justify-end mt-2">
-              <select
-                className="p-2 rounded-lg border border-blue-400 bg-blue-50 text-blue-800 font-semibold"
-                onChange={(e) =>
-                  handleBulkRating(sub.subjectMappingId, e.target.value)
-                }
-              >
-                <option value="">Rate All</option>
-                {[4, 5, 6, 7, 8, 9, 10].map((num) => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
-            </div>
+        <div className="space-y-10">
+          {formData.subjects.map((sub) => (
+            <div key={sub.subjectMappingId} className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {sub.subject}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Faculty: <span className="font-medium">{sub.facultyName}</span>
+                  </p>
+                </div>
 
-            <table className="w-full bg-white mt-4 rounded-lg overflow-hidden">
-              <thead className="bg-blue-100 text-blue-800">
-                <tr>
-                  <th className="p-2 text-left">Question</th>
-                  <th className="p-2 text-center">Rating (4–10)</th>
-                </tr>
-              </thead>
+                <select
+                  className="px-3 py-2 rounded-md border border-gray-300 text-sm 
+                  bg-white focus:ring-2 ring-blue-500 focus:outline-none"
+                  onChange={(e) =>
+                    handleBulkRating(sub.subjectMappingId, e.target.value)
+                  }
+                >
+                  <option value="">Rate All</option>
+                  {[4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <tbody>
-                {formData?.questions?.map((q) => (
-                  <tr key={q.questionId} className="border-b">
-                    <td className="p-3 text-gray-800">{q.text}</td>
-                    <td className="p-2 text-center">
-                      <select
-                        className="p-2 rounded-lg border border-blue-400 bg-blue-50 focus:outline-none text-blue-800 font-semibold"
-                        required
-                        value={
-                          responses[sub.subjectMappingId]?.[q.questionId] || ""
-                        }
-                        onChange={(e) =>
-                          handleRatingChange(
-                            sub.subjectMappingId,
-                            q.questionId,
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="">Select</option>
-                        {[4, 5, 6, 7, 8, 9, 10].map((num) => (
-                          <option key={num} value={num}>
-                            {num}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-100 rounded-md">
+                  <tr className="text-left text-sm text-gray-600">
+                    <th className="p-3">Question</th>
+                    <th className="p-3 text-center">Rating (4–10)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+                </thead>
+
+                <tbody>
+                  {formData.questions.map((q) => (
+                    <tr
+                      key={q.questionId}
+                      className="border-b last:border-none hover:bg-gray-50 transition"
+                    >
+                      <td className="p-3 text-gray-800">{q.text}</td>
+                      <td className="p-2 text-center">
+                        <select
+                          required
+                          className="px-3 py-2 rounded-md border border-gray-300 text-sm bg-white
+                          focus:outline-none focus:ring-2 ring-blue-500"
+                          value={
+                            responses[sub.subjectMappingId]?.[q.questionId] || ""
+                          }
+                          onChange={(e) =>
+                            handleRatingChange(
+                              sub.subjectMappingId,
+                              q.questionId,
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="">Select</option>
+                          {[4, 5, 6, 7, 8, 9, 10].map((num) => (
+                            <option key={num} value={num}>
+                              {num}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+            </div>
+          ))}
+        </div>
 
         <button
           onClick={handleSubmit}
           disabled={!isFormComplete()}
-          className={`w-full p-3 mt-4 rounded-xl font-bold transition-all ${
-            isFormComplete()
-              ? "bg-blue-700 text-white hover:bg-blue-800"
-              : "bg-gray-400 text-gray-700 cursor-not-allowed"
-          }`}
+          className={`w-full mt-10 py-3 text-lg rounded-xl font-semibold transition ${isFormComplete()
+            ? "bg-blue-600 text-white hover:bg-blue-700"
+            : "bg-gray-300 text-gray-600 cursor-not-allowed"
+            }`}
         >
           Submit Feedback
         </button>

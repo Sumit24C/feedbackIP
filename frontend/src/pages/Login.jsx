@@ -101,18 +101,12 @@ export default function Login() {
               type="submit"
               disabled={loading}
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? (
+                <div className="flex flex-col justify-center items-center gap-4 mt-32">
+                  <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
+                </div>
+              ) : "Login"}
             </Button>
-
-            {/* <div className="flex justify-between text-sm mt-2">
-              <RouterLink to="/forgot-password" className="text-blue-700 hover:underline">
-                Forgot Password?
-              </RouterLink>
-              <RouterLink to="/register" className="text-blue-700 hover:underline">
-                Create Account
-              </RouterLink>
-            </div> */}
-
           </form>
         </CardContent>
       </Card>

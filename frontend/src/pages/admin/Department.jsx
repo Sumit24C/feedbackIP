@@ -118,12 +118,12 @@ function Department() {
                         ➕ Add Faculties
                     </button>
 
-                    <button
+                    {/* <button
                         onClick={() => navigate(`/department/${dept_id}/edit`)}
                         className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600"
                     >
                         ✏ Edit Department
-                    </button>
+                    </button> */}
                 </div>
             </div>
 

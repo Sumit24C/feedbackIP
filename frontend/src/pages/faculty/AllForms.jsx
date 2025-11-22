@@ -45,8 +45,13 @@ function AllForms() {
     return () => window.removeEventListener("click", close);
   }, []);
 
-  if (loading) return <div className="text-center p-6 text-gray-500">Loading forms...</div>;
-
+  if (loading)
+    return (
+      <div className="flex flex-col justify-center items-center gap-4 mt-32">
+        <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
+      </div>
+    );
+    
   const today = new Date();
 
   return (
@@ -62,9 +67,8 @@ function AllForms() {
           return (
             <div
               key={form._id}
-              className={`border p-4 rounded shadow-sm bg-white hover:shadow-md transition relative ${
-                isExpired ? "border-red-500 bg-red-50" : "border-gray-300"
-              }`}
+              className={`border p-4 rounded shadow-sm bg-white hover:shadow-md transition relative ${isExpired ? "border-red-500 bg-red-50" : "border-gray-300"
+                }`}
             >
               {/* MENU BUTTON */}
               <div
@@ -114,29 +118,26 @@ function AllForms() {
               <div>
                 <div className="flex justify-between items-center mb-1 pr-8">
                   <h2
-                    className={`text-lg font-semibold ${
-                      isExpired ? "text-red-600" : ""
-                    }`}
+                    className={`text-lg font-semibold ${isExpired ? "text-red-600" : ""
+                      }`}
                   >
                     {form.title}
                   </h2>
 
                   {/* ✅ Moved Badge Away from Menu */}
                   <span
-                    className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
-                      isExpired
+                    className={`text-xs px-2 py-1 rounded whitespace-nowrap ${isExpired
                         ? "bg-red-200 text-red-700"
                         : "bg-blue-100 text-blue-600"
-                    }`}
+                      }`}
                   >
                     {form.formType}
                   </span>
                 </div>
 
                 <p
-                  className={`text-sm ${
-                    isExpired ? "text-red-600" : "text-gray-600"
-                  }`}
+                  className={`text-sm ${isExpired ? "text-red-600" : "text-gray-600"
+                    }`}
                 >
                   Deadline:{" "}
                   <strong>{new Date(form.deadline).toLocaleDateString()}</strong>

@@ -39,7 +39,9 @@ function PersistLogin() {
 
     return (
         <>
-            {isLoading ? <div>Loading...</div> : <Outlet />}
+            {isLoading ? (<div className="flex flex-col justify-center items-center gap-4 mt-32">
+                <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
+            </div>) : <Outlet />}
         </>
     )
 }
