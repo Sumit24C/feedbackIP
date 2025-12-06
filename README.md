@@ -13,7 +13,7 @@ The College Feedback System allows administrators and faculty to:
 * Create departments and manage students/faculty.
 * Define feedback forms (theory, practical, infrastructure).
 * Map subjects to faculty and classes.
-* Collect structured feedback from students.
+* Collect structured feedback from student.
 * Generate analytics for evaluation and reporting.
 
 ---
