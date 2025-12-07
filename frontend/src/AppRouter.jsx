@@ -11,6 +11,8 @@ import { Authorization, AuthLayout, PersistLogin } from './components/auth'
 import { CreateDepartment, AdminDashboard, Department, DepartmentList } from './pages/admin'
 import { FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage } from './pages/student'
 import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyDashboard, FacultyProfilePage, OverallSummary, Questions, QuestionSummary } from './pages/faculty'
+import AuthSuccess from './AuthSuccess'
+import NoAccess from './pages/NoAccess'
 function AppRouter() {
     return (
         <Routes>
@@ -57,6 +59,7 @@ function AppRouter() {
                 </Route>
 
                 <Route path="/unauthorized" element={<UnAuthorized />} />
+                <Route path="/no-access" element={<NoAccess />} />
                 <Route path="*" element={<NotFound />} />
             </Route>
         </Routes>

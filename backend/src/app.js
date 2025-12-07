@@ -9,8 +9,8 @@ app.use(cors({
     credentials: true,
 }))
 
-app.use(express.json({limit: "16kb"}));
-app.use(express.urlencoded({extended: true, limit: "16kb"}));
+app.use(express.json({ limit: "16kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
@@ -19,9 +19,11 @@ import adminRoutes from "./routes/admin.route.js";
 import facultyRoutes from "./routes/faculty.route.js";
 import studentRoutes from "./routes/student.route.js";
 import formRoutes from "./routes/form.route.js";
+import oAuthRoutes from "./routes/oauth.route.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 app.use("/api/user", userRoutes);
+app.use("/api/auth", oAuthRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/student", studentRoutes);

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock } from "lucide-react";
+import { BASE_URL } from "@/constants";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -106,6 +107,23 @@ export default function Login() {
               ) : (
                 "Login"
               )}
+            </Button>
+
+            <div className="relative flex items-center justify-center my-4">
+              <span className="absolute left-0 right-0 border-t border-gray-300"></span>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => window.open(`${BASE_URL}/auth/google`, "_self")}
+              className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 py-2 rounded-2xl shadow-sm flex items-center justify-center gap-2"
+            >
+              <img
+                src="https://www.svgrepo.com/show/475656/google-color.svg"
+                alt="Google Icon"
+                className="w-5 h-5"
+              />
+              Continue with Google
             </Button>
 
           </form>

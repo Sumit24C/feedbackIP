@@ -1,20 +1,13 @@
+import jwt from "jsonwebtoken"
+import { generateState, Google } from "arctic"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
 import { Student } from "../models/student.model.js"
-import { FacultySubject } from "../models/faculty_subject.model.js"
-import jwt from "jsonwebtoken"
 import { Faculty } from "../models/faculty.model.js";
-
-const COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? 'None' : 'Lax',
-}
-
-const accessTokenExpiry = parseInt(process.env.ACCESS_TOKEN_EXPIRY);
-const refreshTokenExpiry = parseInt(process.env.REFRESH_TOKEN_EXPIRY);
+import { FacultySubject } from "../models/faculty_subject.model.js"
+import { accessTokenExpiry, refreshTokenExpiry, COOKIE_OPTIONS } from "../constants.js";
 
 export const registerAdmin = asyncHandler(async (req, res) => {
     const { fullname, email, password, role } = req.body;
@@ -121,7 +114,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
 });
 
 export const refreshAccessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
     if (!incomingRefreshToken) {
         throw new ApiError(401, "unauthorized request")
     }
@@ -135,7 +128,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Refresh token is expired or used")
     }
 
-    const accessToken = await user.generateAccessToken()
+    const accessToken = user.generateAccessToken()
 
     res.status(200)
         .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
@@ -148,6 +141,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     return res.status(200)
         .json(new ApiResponse(200, user, "current user fetched successfully"))
 });
+
 export const getProfileInfo = asyncHandler(async (req, res) => {
     const userRole = req.user.role;
     let user;
