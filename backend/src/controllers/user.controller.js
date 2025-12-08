@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken"
-import { generateState, Google } from "arctic"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"

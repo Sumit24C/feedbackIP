@@ -1,5 +1,4 @@
 import { api } from '@/api/api';
-import { login, logout } from '@/store/authSlice';
 import { useDispatch } from 'react-redux'
 
 const useRefreshToken = () => {
