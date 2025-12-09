@@ -10,7 +10,7 @@ const studentSchema = new mongoose.Schema({
         ref: "Department",
     },
     roll_no: {
-        type: String,
+        type: Number,
         required: true,
     },
     academic_year: {

@@ -16,8 +16,8 @@ router.use(verifyJWT);
 router.route('/').post(verifyRole("faculty"), createAttendance).get(verifyRole("faculty"), getFacultyClassByFacultyId);
 router.route('/f').get(verifyRole("faculty"), getClassStudent);
 router.route('/s').get(verifyRole("student"), getStudentAttendanceByStudentId);
-router.route('/s/:s_id/subject').get(verifyRole("student"), getStudentAttendanceBySubject);
-router.route('/f/:f_id').get(verifyRole("faculty"), getStudentAttendanceByFacultyId);
-router.route('/f/:f_id/class_section').get(verifyRole("faculty"), getStudentAttendanceByClassSection);
+router.route('/s/:subject/:formType').get(verifyRole("student"), getStudentAttendanceBySubject);
+router.route('/f/s').get(verifyRole("faculty"), getStudentAttendanceByFacultyId);
+router.route('/f/s/:faculty_subject').get(verifyRole("faculty"), getStudentAttendanceByClassSection);
 
 export default router

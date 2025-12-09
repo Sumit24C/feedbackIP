@@ -6,6 +6,7 @@ import { Attendance } from "../models/attendance.model.js";
 import { Faculty } from "../models/faculty.model.js";
 import { Student } from "../models/student.model.js";
 import { getStudentAcademicYear } from "../utils/getStudentAcademicYear.js";
+import mongoose from "mongoose";
 
 export const getClassStudent = asyncHandler(async (req, res) => {
     const faculty = await Faculty.findOne({ user_id: req.user?._id });
@@ -163,7 +164,11 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
                 totalClassess: { $sum: 1 },
                 totalPresent: {
                     $sum: {
-                        $cond: ["$students.isPresent", 1, 0]
+                        $cond: {
+                            if: "$students.isPresent",
+                            then: 1,
+                            else: 0
+                        }
                     }
                 },
                 faculty: { $first: "$facultyUser.fullname" },
@@ -203,21 +208,312 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
 });
 
 export const getStudentAttendanceBySubject = asyncHandler(async (req, res) => {
+    const student = await Student.findOne({ user_id: req.user?._id })
+    if (!student) {
+        throw new ApiError(404, "Student not found");
+    }
+
+    const { subject, formType } = req.params;
+    if (!subject || subject.trim() == "" || !formType || !["practical", "theory"].includes(formType)) {
+        throw new ApiError(401, "Subject and formType are required");
+    }
+
+    const attendance = await Attendance.aggregate([
+        { $unwind: "$students" },
+        {
+            $match: {
+                "students.student": student._id
+            }
+        },
+        {
+            $lookup: {
+                from: "facultysubjects",
+                localField: "facultySubject",
+                foreignField: "_id",
+                as: "facultySubject",
+                pipeline: [
+                    {
+                        $project: {
+                            subject: 1,
+                            formType: 1,
+                            faculty: 1
+                        }
+                    }
+                ]
+            }
+        },
+        { $unwind: "$facultySubject" },
+        {
+            $match: {
+                "facultySubject.subject": subject,
+                "facultySubject.formType": formType,
+            }
+        },
+        {
+            $lookup: {
+                from: "faculties",
+                localField: "facultySubject.faculty",
+                foreignField: "_id",
+                as: "faculty",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullname: 1,
+                                        email: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: "$user"
+                    },
+                    {
+                        $project: {
+                            dept: 1,
+                            isHOD: 1,
+                            facultyName: "$user.fullname",
+                            facultyEmail: "$user.email",
+                        }
+                    }
+                ]
+            }
+        },
+        { $unwind: "$faculty" },
+        {
+            $project: {
+                facultySubject: "$facultySubject.subject",
+                formType: "$facultySubject.formType",
+                faculty: 1,
+                attendance: {
+                    isPresent: "$students.isPresent",
+                    date: "$createdAt"
+                }
+            }
+        },
+        {
+            $group: {
+                _id: "$students.student",
+                facultySubject: { $first: "$facultySubject" },
+                formType: { $first: "$formType" },
+                faculty: { $first: "$faculty" },
+                attendance: {
+                    $push: "$attendance"
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                facultySubject: 1,
+                formType: 1,
+                faculty: 1,
+                attendance: 1
+            }
+        }
+    ]);
+
+
+    if (!Array.isArray(attendance) || attendance.length === 0) {
+        throw new ApiError(500, "Failed to fetch attendance record for given subject");
+    }
+
     return res.status(200).json(
-        new ApiResponse(200, {}, "")
-    )
+        new ApiResponse(200, attendance[0], "successsfully attendance record for subject")
+    );
 });
 
 //faculty routes
 export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => {
+
+    const faculty = await Faculty.findOne({ user_id: req.user?._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
+    }
+    const attendance = await FacultySubject.aggregate([
+        {
+            $match: {
+                faculty: faculty._id
+            }
+        },
+        {
+            $lookup: {
+                from: "attendances",
+                localField: "_id",
+                foreignField: "facultySubject",
+                as: "attendance",
+            }
+        },
+        { $unwind: { path: "$attendance", preserveNullAndEmptyArrays: true } },
+        {
+            $unwind: {
+                path: "$attendance.students",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $group: {
+                _id: "$_id",
+                facultySubject: { $first: "$_id" },
+                subject: { $first: "$subject" },
+                formType: { $first: "$formType" },
+                year: { $first: "$year" },
+                classSection: { $first: "$classSection" },
+                dept: { $first: "$dept" },
+                totalClassess: { $addToSet: "$attendance._id" },
+                totalPresent: {
+                    $sum: {
+                        $cond: {
+                            if: "$attendance.students.isPresent",
+                            then: 1,
+                            else: 0
+                        }
+                    }
+                },
+                totalStudents: {
+                    $sum: {
+                        $cond: {
+                            if: "$attendance.students",
+                            then: 1,
+                            else: 0
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $addFields: {
+                totalClassess: { $size: "$totalClassess" },
+            }
+        },
+        {
+            $addFields: {
+                totalPercentage: {
+                    $cond: {
+                        if: { $eq: ["$totalClassess", 0] },
+                        then: 0,
+                        else: {
+                            $multiply: [
+                                { $divide: ["$totalPresent", "$totalStudents"] },
+                                100
+                            ]
+                        }
+                    },
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                facultySubject: 1,
+                subject: 1,
+                dept: 1,
+                classSection: 1,
+                subject: 1,
+                formType: 1,
+                year: 1,
+                totalClassess: 1,
+                totalPercentage: 1,
+            }
+        }
+    ]);
+
+    if (!Array.isArray(attendance) || attendance.length === 0) {
+        throw new ApiError(500, "Failed to fetch attendance record for given subject");
+    }
+
     return res.status(200).json(
-        new ApiResponse(200, {}, "")
-    )
+        new ApiResponse(200, attendance, "successsfully attendance record for faculty")
+    );
 });
 
 export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) => {
+    const { faculty_subject } = req.params;
+    if (!faculty_subject) {
+        throw new ApiError(404, "Faculty Subject not found");
+    }
+
+    const attendance_record = await Attendance.aggregate([
+        {
+            $match: {
+                facultySubject: new mongoose.Types.ObjectId(faculty_subject)
+            }
+        },
+        { $unwind: "$students" },
+        {
+            $lookup: {
+                from: "students",
+                localField: "students.student",
+                foreignField: "_id",
+                as: "studentUser",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user",
+                        }
+                    },
+                    {
+                        $unwind: "$user"
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$studentUser",
+        },
+        {
+            $project: {
+                students: 1,
+                createdAt: 1,
+                roll_no: "$studentUser.roll_no",
+                fullname: "$studentUser.user.fullname",
+                email: "$studentUser.user.email",
+            }
+        },
+        {
+            $group: {
+                _id: "$students.student",
+                fullname: { $first: "$fullname" },
+                email: { $first: "$email" },
+                roll_no: { $first: "$roll_no" },
+                attendance: {
+                    $push: {
+                        date: "$createdAt",
+                        isPresent: "$students.isPresent"
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                roll_no: 1,
+                attendance: 1,
+                email: 1,
+                fullname: 1,
+            }
+        },
+        {
+            $sort: { roll_no: 1 }
+        }
+    ]);
+
+
+    if (!Array.isArray(attendance_record) || attendance_record.length === 0) {
+        throw new ApiError(500, "Failed to fetch attendance record for given subject");
+    }
+
     return res.status(200).json(
-        new ApiResponse(200, {}, "")
+        new ApiResponse(200, attendance_record, "successfully attendance for class")
     )
 });
-
