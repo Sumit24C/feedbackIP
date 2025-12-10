@@ -10,8 +10,7 @@ import {
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
 import { CreateDepartment, AdminDashboard, Department, DepartmentList } from './pages/admin'
 import { FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage } from './pages/student'
-import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyDashboard, FacultyProfilePage, OverallSummary, Questions, QuestionSummary } from './pages/faculty'
-import AuthSuccess from './AuthSuccess'
+import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyDashboard, FacultyProfilePage, OverallSummary, Questions, QuestionSummary, CreateAttendance, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import NoAccess from './pages/NoAccess'
 function AppRouter() {
     return (
@@ -48,7 +47,11 @@ function AppRouter() {
                             <Route path="all-forms" element={<AllForms />} />
                             <Route path="questions" element={<Questions />} />
                             <Route path="create-question-template" element={<CreateQuesTemplate />} />
+                            <Route path='view-attendance' element={<AttendanceDashboard />} />
+                            <Route path='class-attendance/:id' element={<ClassAttendance />} />
+                            <Route path='create-attendance/:id' element={<CreateAttendance />} />
                         </Route>
+                        <Route path="unauthorized" element={<UnAuthorized />} />
                     </Route>
                 </Route>
 
@@ -56,10 +59,9 @@ function AppRouter() {
                 <Route element={<AuthLayout authenticated={false} />}>
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/no-access" element={<NoAccess />} />
                 </Route>
 
-                <Route path="/unauthorized" element={<UnAuthorized />} />
-                <Route path="/no-access" element={<NoAccess />} />
                 <Route path="*" element={<NotFound />} />
             </Route>
         </Routes>

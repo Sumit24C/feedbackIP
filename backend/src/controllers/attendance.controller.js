@@ -69,39 +69,51 @@ export const getFacultyClassByFacultyId = asyncHandler(async (req, res) => {
 });
 
 export const createAttendance = asyncHandler(async (req, res) => {
-    const { attendance, faculty_id, subject, classSection, year, dept } = req.body;
+    const { attendance, faculty_id, subject, classSection, year, dept, createdAt } = req.body;
 
     const faculty = await Faculty.findOne({ user_id: req.user?._id });
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
     }
+    const { faculty_subject } = req.params;
 
-    if ([faculty_id, subject, classSection, year, dept].some(
-        (field) => !field ||
-            ((typeof field === String) && field.trim() === "")
-    )) {
-        throw new ApiError(401, "facultyId, subject, classSection, year, dept are required");
-    }
+
+    // if ([faculty_id, subject, classSection, year, dept].some(
+    //     (field) => !field ||
+    //         ((typeof field === String) && field.trim() === "")
+    // )) {
+    //     throw new ApiError(401, "facultyId, subject, classSection, year, dept are required");
+    // }
 
     if (!attendance || !Array.isArray(attendance) || attendance.length === 0) {
         throw new ApiError(401, "Attendace are required");
     }
 
-    const facultySubject = await FacultySubject.findOne({
-        faculty: faculty_id,
-        classSection,
-        year,
-        subject,
-        dept
-    });
+    // const facultySubject = await FacultySubject.findOne({
+    //     faculty: faculty_id,
+    //     classSection,
+    //     year,
+    //     subject,
+    //     dept
+    // });
+
+    const facultySubject = await FacultySubject.findById(faculty_subject);
 
     if (!facultySubject) {
         throw new ApiError(404, "faculty with this details not found");
     }
 
+    const attendance_obj = {
+        facultySubject: facultySubject,
+        students: attendance,
+    }
+
+    if (createdAt && !(isNaN(new Date(createdAt)))) {
+        attendance_obj["createdAt"] = new Date(createdAt);
+    }
+
     const attendance_record = await Attendance.create({
-        facultySubject,
-        students: attendance
+        ...attendance_obj
     })
 
     if (!attendance_record) {
@@ -349,7 +361,26 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
                 localField: "_id",
                 foreignField: "facultySubject",
                 as: "attendance",
+
             }
+        },
+        {
+            $lookup: {
+                from: "departments",
+                localField: "dept",
+                foreignField: "_id",
+                as: "dept",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$dept"
         },
         { $unwind: { path: "$attendance", preserveNullAndEmptyArrays: true } },
         {
@@ -400,9 +431,14 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
                         if: { $eq: ["$totalClassess", 0] },
                         then: 0,
                         else: {
-                            $multiply: [
-                                { $divide: ["$totalPresent", "$totalStudents"] },
-                                100
+                            $round: [
+                                {
+                                    $multiply: [
+                                        { $divide: ["$totalPresent", "$totalStudents"] },
+                                        100
+                                    ]
+                                },
+                                2
                             ]
                         }
                     },
@@ -422,6 +458,9 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
                 totalClassess: 1,
                 totalPercentage: 1,
             }
+        },
+        {
+            $sort: { classSection: 1 }
         }
     ]);
 
@@ -508,9 +547,8 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
         }
     ]);
 
-
     if (!Array.isArray(attendance_record) || attendance_record.length === 0) {
-        throw new ApiError(500, "Failed to fetch attendance record for given subject");
+        throw new ApiError(404, "No record found");
     }
 
     return res.status(200).json(

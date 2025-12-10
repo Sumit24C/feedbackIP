@@ -6,7 +6,9 @@ import QuestionSummary from "./QuestionSummary";
 import FacultyProfilePage from "./FacultyProfilePage";
 import Questions from "./Questions";
 import CreateQuesTemplate from "./CreateQuesTemplate";
-
+import AttendanceDashboard from "./attendance/AttendanceDashboard";
+import ClassAttendance from "./attendance/ClassAttendance";
+import CreateAttendance from "./attendance/CreateAttendance";
 export {
     CreateFeedbackForm,
     FacultyDashboard,
@@ -15,5 +17,8 @@ export {
     QuestionSummary,
     FacultyProfilePage,
     Questions,
-    CreateQuesTemplate
+    CreateQuesTemplate,
+    AttendanceDashboard,
+    ClassAttendance,
+    CreateAttendance
 }

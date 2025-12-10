@@ -17,8 +17,8 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="flex justify-center gap-6 p-8 min-h-[90vh]">
-      <div className="w-56 p-5 rounded-xl shadow-lg h-fit bg-white border border-gray-200">
+    <div className="flex flex-col sm:flex-row justify-center gap-6 p-8 min-h-lh">
+      <div className="w-56 p-5 rounded-xl shadow-lg h-fit bg-white border border-gray-200 hidden sm:block">
         <h3 className="text-lg font-bold mb-4 text-blue-700">Dashboard</h3>
 
         <div
@@ -46,7 +46,7 @@ const Dashboard = () => {
               onClick={() =>
                 navigate(`/faculty/dashboard/${form_id}/subject/${sub._id}`)
               }
-              className={`p-2 rounded-md cursor-pointer mb-1 text-sm transition-all
+              className={`p-2 rounded-md cursor-pointer mb-1 text-sm transition-all 
               ${active
                   ? "bg-blue-600 text-white shadow-sm"
                   : "hover:bg-blue-100 text-gray-700"
@@ -57,7 +57,7 @@ const Dashboard = () => {
           );
         })}
       </div>
-      <div className="w-[70%] max-w-4xl rounded-2xl shadow-xl p-6 bg-white">
+      <div className="sm:min-w-2xl max-w-4xl rounded-2xl shadow-xl p-6 bg-white">
         <Outlet />
       </div>
 

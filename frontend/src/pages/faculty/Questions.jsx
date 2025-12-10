@@ -3,6 +3,7 @@ import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 function Questions() {
   const axiosPrivate = useAxiosPrivate();
@@ -44,12 +45,8 @@ function Questions() {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold tracking-wide text-gray-800">
-          Question Templates
-        </h2>
-
+    <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="flex items-center justify-between mb-2">
         <Button
           onClick={() => navigate("/faculty/create-question-template")}
           className="bg-blue-600 hover:bg-blue-700 shadow-md"
@@ -71,14 +68,15 @@ function Questions() {
           No templates available yet.
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6 mt-6">
+        <div className="flex flex-wrap flex-col md:grid md:grid-cols-2">
           {templates.map((template) => (
             <div
               key={template._id}
               className="
-                p-6 rounded-xl border bg-white 
+                p-4 rounded-xl border bg-white 
                 shadow-sm hover:shadow-lg transition-all
                 hover:-translate-y-1 duration-300
+                m-4 md:min-w-40
               "
             >
               <div className="flex justify-between items-center">
@@ -86,16 +84,26 @@ function Questions() {
                   {template.name || "Untitled Template"}
                 </h3>
 
-                <span
-                  className={`
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`
                     px-3 py-1 rounded-lg text-xs uppercase font-semibold 
                     ${template.formType === "practical"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-blue-100 text-blue-700"}
+                        ? "bg-green-100 text-green-700"
+                        : "bg-blue-100 text-blue-700"}
                   `}
-                >
-                  {template.formType}
-                </span>
+                  >
+                    {template.formType}
+                  </span>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDelete(template._id)}
+                    disabled={deleteLoading}
+                    className="shadow-sm"
+                  >
+                    {deleteLoading ? "Deleting..." : <Trash2 />}
+                  </Button>
+                </div>
               </div>
 
               <p className="text-gray-500 text-sm mt-1">
@@ -113,12 +121,12 @@ function Questions() {
                       key={q._id}
                       className="bg-gray-50 border rounded-lg p-3 text-sm"
                     >
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center gap-1.5">
                         <span className="font-medium text-gray-800">
                           {index + 1}. {q.questionText}
                         </span>
 
-                        <span className="bg-gray-700 text-white text-[10px] px-2 py-1 rounded">
+                        <span className="bg-gray-700 text-white p-2 rounded sm:p-3">
                           {q.questionType}
                         </span>
                       </div>
@@ -128,14 +136,7 @@ function Questions() {
               </div>
 
               <div className="flex justify-end gap-3 mt-5">
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDelete(template._id)}
-                  disabled={deleteLoading}
-                  className="shadow-sm"
-                >
-                  {deleteLoading ? "Deleting..." : "Delete"}
-                </Button>
+
               </div>
             </div>
           ))}

@@ -47,7 +47,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
-      <Card className="w-full max-w-sm shadow-2xl border-none backdrop-blur-md bg-white/60 rounded-3xl">
+      <Card className="w-full max-w-sm shadow-2xl border-none backdrop-blur-md bg-white/60 rounded-3xl m-2">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-extrabold text-blue-800">FeedBack System</CardTitle>
           <p className="text-sm text-gray-600">Login to continue</p>
@@ -67,7 +67,7 @@ export default function Login() {
               <div className="relative">
                 <Mail className="absolute left-3 top-2.5 text-gray-500" size={18} />
                 <Input
-                  type="text"
+                  type="email"
                   className="pl-10 py-2 rounded-xl border-gray-300 focus:border-blue-600"
                   placeholder="Enter your email"
                   {...register("email", { required: "Email is required" })}
@@ -83,7 +83,7 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 text-gray-500" size={18} />
                 <Input
-                  type="password"
+                  type="current-password"
                   className="pl-10 py-2 rounded-xl border-gray-300 focus:border-blue-600"
                   placeholder="Enter your password"
                   {...register("password", { required: "Password is required" })}
@@ -102,7 +102,6 @@ export default function Login() {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-3 border-transparent border-t-white rounded-full animate-spin"></div>
-                  <span>Logging in...</span>
                 </>
               ) : (
                 "Login"

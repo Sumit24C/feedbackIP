@@ -10,7 +10,7 @@ import {
   NavigationMenuList,
   NavigationMenuItem,
 } from "@/components/ui/navigation-menu";
-
+import { Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,6 +35,7 @@ function Header() {
       { path: "/faculty/create-form", name: "Create Form" },
       { path: "/faculty/questions", name: "Questions" },
       { path: "/faculty/create-question-template", name: "Add Questions" },
+      { path: "/faculty/view-attendance", name: "Attendance" },
     ],
     student: [{ path: "/student/forms", name: "Feedback Form" }],
   };
@@ -71,34 +72,32 @@ function Header() {
         transition-colors duration-300
       "
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-between">
         <div
           className="
             w-11 h-11 rounded-2xl
-            bg-gradient-to-br from-blue-500 to-indigo-600
+            bg-gradient-to-br bg-blue-700
             flex items-center justify-center
-            text-white text-lg font-bold
-            shadow-[0_0_14px_rgba(59,130,246,0.55)]
-            animate-[pulse_3s_ease-in-out_infinite]
+            text-white text-lg font-bold sm:hidden
           "
         >
-          FB
+          C
         </div>
 
         <Link
           to={`/${navLogo[userData?.role]}`}
           className="
-            text-xl font-black tracking-wide
-            bg-gradient-to-r from-blue-600 to-indigo-600
-            text-transparent bg-clip-text
+            sm:text-xl font-black tracking-wide
+            bg-gradient-to-r bg-blue-700
+            text-transparent bg-clip-text hidden sm:block
           "
         >
-          Feedback Portal
+          ClassSetu
         </Link>
       </div>
 
-      <div className="flex items-center gap-4">
-        <NavigationMenu>
+      <div className="sm:flex items-center gap-4">
+        <NavigationMenu className="hidden sm:block">
           <NavigationMenuList className="flex gap-2">
             {navItems.map((item) => (
               <NavigationMenuItem key={item.name}>
@@ -127,10 +126,8 @@ function Header() {
             <DropdownMenuTrigger asChild>
               <div
                 className="
-                  w-10 h-10 rounded-full cursor-pointer
-                  bg-gradient-to-br from-blue-500 to-indigo-600
+                  w-10 h-10 rounded-full cursor-pointer bg-blue-700
                   flex items-center justify-center text-white font-semibold select-none
-                  shadow-[0_0_10px_rgba(59,130,246,0.6)]
                   hover:scale-105 transition-all
                 "
               >
@@ -138,8 +135,8 @@ function Header() {
               </div>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent className="w-48 p-1">
-              <DropdownMenuItem className="text-sm text-gray-700 font-medium">
+            <DropdownMenuContent className="w-40 sm:w-44 mx-2 text-xm truncate">
+              <DropdownMenuItem className="text-xs text-gray-700 font-medium">
                 {userData?.email}
               </DropdownMenuItem>
 

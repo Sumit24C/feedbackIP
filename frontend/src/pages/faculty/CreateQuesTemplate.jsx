@@ -1,6 +1,7 @@
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus, Trash2 } from "lucide-react";
 
 function CreateQuesTemplate() {
     const axiosPrivate = useAxiosPrivate();
@@ -10,23 +11,21 @@ function CreateQuesTemplate() {
     const [questions, setQuestions] = useState([
         { questionText: "", questionType: "rating" },
     ]);
+    const [question, setQuestion] = useState({ questionText: "", questionType: "rating" });
+
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const navigate = useNavigate();
     const handleQuestionChange = (index, value) => {
-        const updated = [...questions];
-        updated[index].questionText = value;
-        setQuestions(updated);
+        setQuestions((prev) => prev.map((p, i) => i === index ? { ...p, questionText: value } : p))
     };
 
     const addQuestion = () => {
-        setQuestions([...questions, { questionText: "", questionType: "rating" }]);
+        setQuestions((prev) => [...prev, { questionText: "", questionType: "rating" }]);
     };
 
     const removeQuestion = (index) => {
-        const updated = [...questions];
-        updated.splice(index, 1);
-        setQuestions(updated);
+        setQuestions((prev) => prev.filter((p, i) => i !== index))
     };
 
     const handleSubmit = async (e) => {
@@ -57,22 +56,23 @@ function CreateQuesTemplate() {
     };
 
     return (
-        <div className="min-h-screen flex justify-center py-10 bg-gray-100">
+
+        <div className="flex justify-center ">
             <form
                 onSubmit={handleSubmit}
-                className="w-full max-w-2xl bg-white rounded-lg shadow p-8 space-y-6"
+                className="w-full max-w-2xl bg-white p-6 space-y-3 m-10 rounded-2xl shadow-2xl"
             >
                 <h2 className="text-2xl font-bold text-gray-700">Create Question Template</h2>
 
                 <div>
-                    <label className="block font-semibold text-gray-700 mb-1">
+                    <label className="block font-semibold text-gray-700">
                         Template Name
                     </label>
                     <input
                         type="text"
                         value={templateName}
                         onChange={(e) => setTemplateName(e.target.value)}
-                        className="w-full border rounded px-3 py-2"
+                        className="w-full border rounded px-3 py-2 mt-2"
                         placeholder="e.g., Mid-Sem Theory Feedback Template"
                         required
                     />
@@ -82,57 +82,73 @@ function CreateQuesTemplate() {
                     <select
                         value={formType}
                         onChange={(e) => setFormType(e.target.value)}
-                        className="ml-2 border rounded px-3 py-1"
+                        className="border rounded p-2 mx-2"
                     >
-                        <option value="theory">Theory</option>
-                        <option value="practical">Practical</option>
+                        {["theory", "practical"].map((val) => (
+                            <option className="text-xs sm:text-sm" key={val} value={val}>
+                                {val}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
-                <div className="space-y-4">
-                    <h3 className="font-semibold text-gray-700">Questions:</h3>
+                <div className="space-y-2">
+                    <h3 className="font-semibold relative text-gray-700">Questions:</h3>
+                    <div className="max-h-48 min-h-30 max-w-2xl overflow-y-scroll shadow-inner">
+                        {questions.map((q, index) => (
+                            <div
+                                key={index}
+                                className="flex items-center border p-2 rounded space-x-2 justify-between"
+                            >
+                                <input
+                                    type="text"
+                                    placeholder={`Question ${index + 1}`}
+                                    value={q.questionText}
+                                    onChange={(e) =>
+                                        handleQuestionChange(index, e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            if (e.target.value.trim() !== "") {
+                                                addQuestion();
+                                            }
+                                        }
+                                    }}
+                                    className="flex-1 border rounded px-3 py-2"
+                                    required
+                                    autoFocus
+                                />
+                                <div className="flex items-center space-x-2">
+                                    {index === questions.length - 1 && q.questionText.trim() !== "" && (
+                                        <button
+                                            type="button"
+                                            onClick={addQuestion}
+                                            className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-full"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    {questions.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeQuestion(index)}
+                                            className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
 
-                    {questions.map((q, index) => (
-                        <div
-                            key={index}
-                            className="flex items-center gap-2 border p-2 rounded"
-                        >
-                            <input
-                                type="text"
-                                placeholder={`Question ${index + 1}`}
-                                value={q.questionText}
-                                onChange={(e) =>
-                                    handleQuestionChange(index, e.target.value)
-                                }
-                                className="flex-1 border rounded px-3 py-2"
-                                required
-                            />
-
-                            {questions.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => removeQuestion(index)}
-                                    className="px-3 py-1 bg-red-500 text-white rounded"
-                                >
-                                    X
-                                </button>
-                            )}
-                        </div>
-                    ))}
-
-                    <button
-                        type="button"
-                        onClick={addQuestion}
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
-                    >
-                        + Add Question
-                    </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-green-600 text-white py-2 rounded font-semibold disabled:bg-gray-400"
+                    className="w-full bg-green-600 text-white py-2 rounded-xl font-semibold disabled:bg-gray-400 cursor-pointer"
                 >
                     {loading ? "Creating..." : "Create Template"}
                 </button>
@@ -143,6 +159,7 @@ function CreateQuesTemplate() {
                     </p>
                 )}
             </form>
+
         </div>
     );
 }

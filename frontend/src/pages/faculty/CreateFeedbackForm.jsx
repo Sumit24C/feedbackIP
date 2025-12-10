@@ -3,6 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 function CreateFeedbackForm() {
   const { form_id } = useParams();
@@ -134,12 +143,14 @@ function CreateFeedbackForm() {
   const formMode = form_id ? "update" : "create";
 
   if (loadingForm) return <div className="p-4">Loading form...</div>;
-
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">
-        {form_id ? "✏️ Edit Feedback Form" : "Create Feedback Form"}
-      </h1>
+    <div className="p-4 max-w-3xl mx-auto space-y-4">
+      <div className="flex flex-col justify-center items-center">
+        <h1 className="text-xl font-bold text-center">
+          {form_id ? "✏️ Edit Form" : "Create Form"}
+        </h1>
+        <div className="w-30 border-1 border-blue-300"></div>
+      </div>
 
       <div>
         <label className="block font-medium">Form Title</label>
@@ -150,17 +161,20 @@ function CreateFeedbackForm() {
           className="w-full border p-2 rounded mt-1"
         />
       </div>
-      <div>
-        <label className="block font-medium">Form Type</label>
-        <select
-          className="w-full border p-2 rounded mt-1"
-          value={formType}
-          onChange={(e) => setFormType(e.target.value)}
-        >
-          <option value="">Select Form Type</option>
-          <option value="theory">theory</option>
-          <option value="practical">practical</option>
-        </select>
+      <div className="flex sm:flex-col sm:justify-start sm:items-baseline justify-between items-center space-y-1">
+        <label className="font-medium">Form Type: </label>
+        <Select onValueChange={(val) => setFormType(val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a form-type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>form type</SelectLabel>
+              <SelectItem value="theory">theory</SelectItem>
+              <SelectItem value="practical">practical</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
 
       <div>

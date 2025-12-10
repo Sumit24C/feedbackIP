@@ -194,7 +194,10 @@ export const getAllQuestionTemplates = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     };
 
-    const questionTemplates = await QuestionTemplate.find().populate("question");
+    const questionTemplates = await QuestionTemplate.find().populate("question").sort({
+        createdAt: -1
+    });
+
     if (!questionTemplates) {
         throw new ApiError(500, "Failed to fetch question template");
     }
@@ -244,7 +247,7 @@ export const deleteQuestionTemplateById = asyncHandler(async (req, res) => {
     const quesId = quesTemp.question.map((q) => q._id);
 
     await QuestionTemplate.findByIdAndDelete(question_template_id);
-    await Question.deleteMany({_id: quesId});
+    await Question.deleteMany({ _id: quesId });
 
     return res.status(200).json(
         new ApiResponse(200, {}, "successfully deleted question template")

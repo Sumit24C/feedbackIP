@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 router.use(verifyJWT);
-router.route('/').post(verifyRole("faculty"), createAttendance).get(verifyRole("faculty"), getFacultyClassByFacultyId);
+router.route('/:faculty_subject').post(verifyRole("faculty"), createAttendance).get(verifyRole("faculty"), getFacultyClassByFacultyId);
 router.route('/f').get(verifyRole("faculty"), getClassStudent);
 router.route('/s').get(verifyRole("student"), getStudentAttendanceByStudentId);
 router.route('/s/:subject/:formType').get(verifyRole("student"), getStudentAttendanceBySubject);
