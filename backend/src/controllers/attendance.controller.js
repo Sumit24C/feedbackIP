@@ -476,7 +476,29 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
 export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) => {
     const { faculty_subject } = req.params;
     if (!faculty_subject) {
-        throw new ApiError(404, "Faculty Subject not found");
+        throw new ApiError(401, "Faculty Subject is required");
+    }
+
+    const attendance = await Attendance.find({ facultySubject: faculty_subject });
+
+    if (attendance.length === 0) {
+        const facultySubject = await FacultySubject.findById(faculty_subject).populate("subject");
+
+        if (!facultySubject) {
+            throw new ApiError(404, "Faculty not found for this subject");
+        }
+        console.log(facultySubject);
+
+        const academic_year = getStudentAcademicYear(facultySubject.subject.year);
+        const student = await Student.find({
+            dept: facultySubject.subject.dept,
+            classSection: facultySubject.classSection,
+            academic_year: academic_year
+        }).populate("users", "fullname email").select("roll_no");
+
+        return res.status(200).json(
+            new ApiResponse(200, student, "successfully fetched students for this subjec")
+        );
     }
 
     const attendance_record = await Attendance.aggregate([
@@ -548,10 +570,10 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
     ]);
 
     if (!Array.isArray(attendance_record) || attendance_record.length === 0) {
-        throw new ApiError(404, "No record found");
+        throw new ApiError(500, "Failed to fetch student attendance");
     }
 
     return res.status(200).json(
-        new ApiResponse(200, attendance_record, "successfully attendance for class")
+        new ApiResponse(200, attendance_record, "successfully fetched attendance for class")
     )
 });

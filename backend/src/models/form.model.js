@@ -17,7 +17,7 @@ const formSchema = new mongoose.Schema({
     },
     formType: {
         type: String,
-        enum: ["practical", "theory", "infrastructure"],
+        enum: ["practical", "theory", "infrastructure", "quiz"],
         required: true
     },
     questions: [{
