@@ -13,6 +13,7 @@ import { Faculty } from "../models/faculty.model.js";
 import { FacultySubject } from "../models/faculty_subject.model.js";
 import { Form } from "../models/form.model.js";
 import { Response } from "../models/response.model.js";
+import { Subject } from "../models/subject.model.js";
 
 export const createDepartment = asyncHandler(async (req, res) => {
     const session = await mongoose.startSession();
@@ -67,7 +68,7 @@ export const createDepartment = asyncHandler(async (req, res) => {
 
         const existingFac = await User.find({ email: { $in: facultyEmails } });
 
-        const existFacEmails = new Map(); 
+        const existFacEmails = new Map();
         existingFac.forEach(u => {
             existFacEmails.set(u.email, u._id);
         });
@@ -76,7 +77,7 @@ export const createDepartment = asyncHandler(async (req, res) => {
         const newFaculties = [];
         const subjects = [];
 
-        const uploadEmailToFacultyId = new Map(); 
+        const uploadEmailToFacultyId = new Map();
 
         facultyData.forEach(f => {
             const email = f.email;
@@ -154,6 +155,93 @@ export const createDepartment = asyncHandler(async (req, res) => {
     }
 });
 
+export const createDept = asyncHandler(async (req, res) => {
+    const { dept_name, password } = req.body;
+    if (!dept_name || !dept_name.trim() || !password || !password.trim()) {
+        throw new ApiError(401, "department name and password are required");
+    }
+
+    const department = await Department.create({ name: dept_name });
+    if (!department) {
+        throw new ApiError(500, "Failed to create department");
+    }
+
+    const studentExcel = req.files?.students?.[0];
+    const facultyExcel = req.files?.faculty?.[0];
+    const subjectExcel = req.files?.subject?.[0];
+
+    if (!studentExcel || !facultyExcel || !subjectExcel) {
+        throw new ApiError(401, "Excel of student, faculty and subject is required");
+    }
+
+    const studentData = await excelToJson(studentExcel);
+    const facultyata = await excelToJson(facultyExcel);
+    const subjectData = await excelToJson(subjectExcel);
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const uniqueStudent = new Set();
+        const uniqueFaculty = new Set();
+        const uniqueSubject = new Set();
+        const uniqueUser = new Set();
+        const hashedPassword = await bcrypt.hash(password, 10);
+        studentData.forEach((s) => {
+            const user_id = new mongoose.Types.ObjectId();
+            uniqueStudent.push({
+                user_id: user_id,
+                roll_no: s.roll_no,
+                academic_year: s.academic_year,
+                classSection: s.classSection,
+                dept: department._id
+            })
+            uniqueUser.push({
+                _id: user_id,
+                email: s.email,
+                fullname: s.fullname,
+                role: "student",
+                password: hashedPassword
+            })
+        });
+
+        facultyata.forEach((f) => {
+            const user_id = new mongoose.Types.ObjectId();
+            uniqueUser.push({
+                _id: user_id,
+                email: s.email,
+                fullname: s.fullname,
+                role: "student",
+                password: hashedPassword
+            })
+            uniqueFaculty.push({
+                user_id: user_id,
+                dept: department._id
+            })
+        });
+
+        subjectData.forEach((sub) => {
+            if (!sub.subject_code || !sub.name) return;
+
+            subjectsToInsert.push({
+                name: sub.name,
+                subject_code: sub.subject_code,
+                year: sub.year,
+                type: sub.type,
+                dept: deptId
+            });
+        });
+
+        const subject = await Subject.insertMany(uniqueSubject, { session });
+        const facultySubject = [];
+        await session.commitTransaction();
+        session.endSession();
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+    }
+})
+
 export const editDepartment = asyncHandler(async (req, res) => {
     const { dept_id } = req.params;
     if (!dept_id) {
@@ -229,7 +317,7 @@ export const getDepartments = asyncHandler(async (req, res) => {
                 foreignField: "_id",
                 as: "hodUser",
             }
-        },  
+        },
         {
             $project: {
                 name: 1,

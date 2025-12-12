@@ -13,9 +13,9 @@ const responseSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Student",
     },
-    subjectMapping: {
+    facultySubject: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "SubjectMapping",
+        ref: "FacultySubject",
     },
     responses: [
         {
@@ -31,6 +31,7 @@ const responseSchema = new mongoose.Schema({
         },
     ],
 }, { timestamps: true });
+
 responseSchema.plugin(mongooseAggregatePaginate);
 const Response = mongoose.model("Response", responseSchema);
 
