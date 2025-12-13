@@ -1,9 +1,14 @@
 import mongoose from "mongoose";
+import { Question } from "./question.model.js";
 
 const questionTemplateSchema = new mongoose.Schema({
     dept: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Department"
+    },
+    name: {
+        type: String,
+        required: true
     },
     question: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -15,15 +20,18 @@ const questionTemplateSchema = new mongoose.Schema({
     },
     formType: {
         type: String,
-        enum: ["practical", "theory", "infrastructure"],
+        enum: ["practical", "theory", "infrastructure", "quiz"],
         required: true
     },
-    name: {
-        type: String,
-        required: true
-    }
 }, { timestamps: true });
 
+questionTemplateSchema.pre("deleteOne", {
+    document: true, query: false
+}, async function (next) {
+    const question_template = this.getFilter();
+    const questionIds = question_template.question
+    await Question.findOneAndDelete({ _id: { $in: questionIds } })
+});
 const QuestionTemplate = mongoose.model("QuestionTemplate", questionTemplateSchema);
 
 export { QuestionTemplate };

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const oauthSchema = new mongoose.Schema({
-    user: {
+    user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
     },

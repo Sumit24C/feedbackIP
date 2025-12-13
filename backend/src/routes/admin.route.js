@@ -3,7 +3,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js"
 import {
     addFaculty,
     addStudents,
-    createDepartment,
+    createDept,
     deleteDepartment,
     editDepartment,
     getDepartmentById,
@@ -18,8 +18,9 @@ router.use(verifyJWT, verifyRole("admin"));
 
 router.post("/", upload.fields([
     { name: "students", maxCount: 1 },
-    { name: "faculties", maxCount: 1 }
-]), createDepartment);
+    { name: "faculties", maxCount: 1 },
+    { name: "subjects", maxCount: 1 },
+]), createDept);
 
 router.route("/").get(getDepartments);
 

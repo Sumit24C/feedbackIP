@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { User } from "./user.model.js";
 
 const studentSchema = new mongoose.Schema({
     user_id: {
@@ -29,17 +30,10 @@ const studentSchema = new mongoose.Schema({
     ]
 }, { timestamps: true })
 
-studentSchema.pre("deleteMany", async function (next) {
-    const filter = this.getFilter();
-
-    const students = await mongoose.model("Student").find(filter);
-
-    const userIds = students.map((s) => s.user_id);
-
-    if (userIds.length > 0) {
-        await mongoose.model("User").deleteMany({ _id: { $in: userIds } });
-    }
-
+studentSchema.pre("deleteOne", {
+    document: true, query: false
+}, async function (next) {
+    await User.findByIdAndDelete(this.user_id);
     next();
 });
 

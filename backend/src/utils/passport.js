@@ -31,7 +31,7 @@ passport.use(
                 }
 
                 const oauth_user = await OAuth.create({
-                    user: user._id,
+                    user_id: user._id,
                     provider: "google",
                     provider_account_id: googleId,
                 });

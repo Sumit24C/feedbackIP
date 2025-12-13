@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { User } from "./user.model.js";
 
 const facultySchema = new mongoose.Schema({
     user_id: {
@@ -7,7 +8,7 @@ const facultySchema = new mongoose.Schema({
     },
     dept: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Department",   
+        ref: "Department",
     },
     isHOD: {
         type: Boolean,
@@ -15,16 +16,13 @@ const facultySchema = new mongoose.Schema({
     },
 }, { timestamps: true })
 
-facultySchema.pre("deleteMany", async function (next) {
-    const filter = this.getFilter();
-    const faculties = await mongoose.model("Faculty").find(filter);
-    const userIds = faculties.map(s => s.user_id);
-
-    if (userIds.length > 0) {
-        await mongoose.model("User").deleteMany({ _id: { $in: userIds } });
-    }
+facultySchema.pre("deleteOne", {
+    document: true, query: false
+}, async function (next) {
+    await User.findByIdAndDelete(this.user_id);
     next();
 });
+
 const Faculty = mongoose.model("Faculty", facultySchema);
 
 export { Faculty };
