@@ -5,7 +5,6 @@ import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
 import { Student } from "../models/student.model.js"
 import { Faculty } from "../models/faculty.model.js";
-import { FacultySubject } from "../models/faculty_subject.model.js"
 import { accessTokenExpiry, refreshTokenExpiry, COOKIE_OPTIONS } from "../constants.js";
 
 export const registerAdmin = asyncHandler(async (req, res) => {
@@ -96,19 +95,25 @@ export const updatePassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;
 
     if (!oldPassword || !newPassword) {
-        throw new ApiError(401, "All fields are required");
+        throw new ApiError(400, "Old password and new password are required");
     }
 
     const user = await User.findById(req.user._id);
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword, user.password);
-    if (!isPasswordCorrect) {
-        throw new ApiError(403, "Invalid password");
+    if (!user) {
+        throw new ApiError(404, "User not found");
     }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordCorrect) {
+        throw new ApiError(403, "Invalid current password");
+    }
+
     user.password = newPassword;
-    await user.save({ validateBeforeSave: false });
+
+    await user.save();
 
     return res.status(200).json(
-        new ApiResponse(200, {}, "updated password successfully")
+        new ApiResponse(200, {}, "Password updated successfully")
     );
 });
 
@@ -144,12 +149,10 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 export const getProfileInfo = asyncHandler(async (req, res) => {
     const userRole = req.user.role;
     let user;
-
     if (userRole === "student") {
         user = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
     } else if (userRole === "faculty") {
-        const faculty = await Faculty.findOne({ user_id: req.user._id });
-        user = await FacultySubject.findOne({ faculty: faculty._id }).populate("dept").populate("faculty");
+        user = await Faculty.findOne({ user_id: req.user._id }).populate("dept", "name");
     }
 
     return res.status(200)

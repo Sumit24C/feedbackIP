@@ -71,6 +71,7 @@ function DepartmentList() {
               <th className="p-4 font-semibold">Name</th>
               <th className="p-4 font-semibold">Students</th>
               <th className="p-4 font-semibold">Faculties</th>
+              <th className="p-4 font-semibold">Subjects</th>
               <th className="p-4 text-center font-semibold">Actions</th>
             </tr>
           </thead>
@@ -84,6 +85,7 @@ function DepartmentList() {
                 <td className="p-4">{dept.name}</td>
                 <td className="p-4">{dept.studentCount}</td>
                 <td className="p-4">{dept.facultyCount}</td>
+                <td className="p-4">{dept.subjectCount}</td>
 
                 <td className="p-4 relative text-center">
                   <button

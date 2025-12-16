@@ -33,8 +33,8 @@ function Header() {
     faculty: [
       { path: "/faculty/all-forms", name: "All Forms" },
       { path: "/faculty/create-form", name: "Create Form" },
-      { path: "/faculty/questions", name: "Questions" },
-      { path: "/faculty/create-question-template", name: "Add Questions" },
+      // { path: "/faculty/questions", name: "Questions" },
+      // { path: "/faculty/create-question-template", name: "Add Questions" },
       { path: "/faculty/view-attendance", name: "Attendance" },
     ],
     student: [{ path: "/student/forms", name: "Feedback Form" }],

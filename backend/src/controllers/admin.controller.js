@@ -1,30 +1,32 @@
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import fs from "fs/promises";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
+import { excelToJson } from "../utils/excelToJson.js";
 import { User } from "../models/user.model.js"
 import { Student } from "../models/student.model.js";
-import { Department } from "../models/department.model.js"
-import * as XLSX from "xlsx"
-import fs from "fs-extra"
-import mongoose from "mongoose";
-import bcrypt from "bcrypt";
-import { excelToJson } from "../utils/excelToJson.js";
 import { Faculty } from "../models/faculty.model.js";
+import { Department } from "../models/department.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js";
 import { Form } from "../models/form.model.js";
 import { Response } from "../models/response.model.js";
 import { Subject } from "../models/subject.model.js";
 import { OAuth } from "../models/oauth.model.js";
 import { Attendance } from "../models/attendance.model.js"
-import { QuestionTemplate } from "../models/question_template.model.js"
+
 export const createDept = asyncHandler(async (req, res) => {
-    console.log("req", req.body);
     const { dept_name, password } = req.body;
     if (!dept_name || !dept_name.trim() || !password || !password.trim()) {
         throw new ApiError(400, "department name and password are required");
     }
     const session = await mongoose.startSession();
     session.startTransaction();
+
+    if (password.length < 8) {
+        throw new ApiError(400, "Password must be at least 8 characters");
+    }
 
     const studentExcel = req.files?.students?.[0];
     const facultyExcel = req.files?.faculties?.[0];
@@ -47,6 +49,7 @@ export const createDept = asyncHandler(async (req, res) => {
         const facultyToInsert = [];
         const subjectsToInsert = [];
         const usersToInsert = [];
+
         let emails = new Set();
         let subject_codes = new Set();
         subjectData.forEach((sub) => {
@@ -66,6 +69,25 @@ export const createDept = asyncHandler(async (req, res) => {
         insertedSubjects.forEach((sub) => {
             subjectMap.set(sub.subject_code, sub._id)
         });
+
+        const allEmails = [
+            ...studentData.map(s => s.email?.toLowerCase().trim()),
+            ...facultyData.map(f => f.email?.toLowerCase().trim())
+        ].filter(Boolean);
+
+        const existingUsers = await User.find(
+            { email: { $in: allEmails } },
+            { email: 1 },
+            { session }
+        );
+
+        if (existingUsers.length) {
+            throw new ApiError(
+                409,
+                `Emails already exist: ${existingUsers.map(u => u.email).join(", ")}`
+            );
+        }
+
         studentData.forEach((s) => {
             const email = s.email?.toLowerCase()?.trim();
             if (!email || emails.has(email)) {
@@ -94,9 +116,9 @@ export const createDept = asyncHandler(async (req, res) => {
                 fullname: s.fullname,
                 role: "student",
                 password: hashedPassword
-            })
+            });
         });
-        if (!usersToInsert.length) {
+        if (usersToInsert.length === 0) {
             throw new ApiError(400, "No valid students found in Excel files");
         }
 
@@ -108,7 +130,6 @@ export const createDept = asyncHandler(async (req, res) => {
             }
             emails.add(email);
             const user_id = new mongoose.Types.ObjectId();
-            console.log(f);
 
             usersToInsert.push({
                 _id: user_id,
@@ -180,7 +201,12 @@ export const createDept = asyncHandler(async (req, res) => {
         }
         console.error("Failed Full Creation:", error);
         throw new ApiError(500, "Failed to create department with full data");
+    } finally {
+        if (studentExcel?.path) await fs.unlink(studentExcel.path);
+        if (facultyExcel?.path) await fs.unlink(facultyExcel.path);
+        if (subjectExcel?.path) await fs.unlink(subjectExcel.path);
     }
+
 });
 
 export const editDepartment = asyncHandler(async (req, res) => {
@@ -188,7 +214,6 @@ export const editDepartment = asyncHandler(async (req, res) => {
     if (!dept_id) {
         throw new ApiError(400, "DepartmentId is required");
     }
-
 
     const { dept_name } = req.body;
     if (!dept_name) {
@@ -239,6 +264,14 @@ export const getDepartments = asyncHandler(async (req, res) => {
             }
         },
         {
+            $lookup: {
+                from: "subjects",
+                localField: "_id",
+                foreignField: "dept",
+                as: "subjects",
+            }
+        },
+        {
             $addFields: {
                 hodDetails: {
                     $first: {
@@ -264,6 +297,7 @@ export const getDepartments = asyncHandler(async (req, res) => {
                 name: 1,
                 studentCount: { $size: "$students" },
                 facultyCount: { $size: "$faculties" },
+                subjectCount: { $size: "$subjects" },
                 hod: {
                     $ifNull: [
                         { $arrayElemAt: ["$hodUser.fullname", 0] },
@@ -280,7 +314,7 @@ export const getDepartments = asyncHandler(async (req, res) => {
     );
 });
 
-export const addStudents = asyncHandler(async (req, res) => {
+export const addStudentFile = asyncHandler(async (req, res) => {
 
     const { dept_id } = req.params;
     if (!dept_id) {
@@ -353,7 +387,7 @@ export const addStudents = asyncHandler(async (req, res) => {
     }
 });
 
-export const addFaculty = asyncHandler(async (req, res) => {
+export const addFacultyFile = asyncHandler(async (req, res) => {
 
     const { dept_id } = req.params;
     if (!dept_id) {
@@ -435,6 +469,74 @@ export const addFaculty = asyncHandler(async (req, res) => {
     }
 });
 
+export const addSubjectFile = asyncHandler(async (req, res) => {
+    const { dept_id } = req.params;
+    if (!dept_id) {
+        throw new ApiError(403, "Department ID is required");
+    }
+
+    const department = await Department.findById(dept_id);
+    if (!department) {
+        throw new ApiError(404, "Department not found");
+    }
+
+    const subjectFile = req.file;
+    if (!subjectFile) {
+        throw new ApiError(403, "Excel file is required");
+    }
+
+    const subjectData = await excelToJson(subjectFile);
+    if (!Array.isArray(subjectData) || subjectData.length === 0) {
+        throw new ApiError(403, "Excel file is empty or invalid");
+    }
+
+    const subjectCodes = subjectData
+        .map(s => s.subject_code?.trim())
+        .filter(Boolean);
+
+    const existingSubjects = await Subject.find(
+        { subject_code: { $in: subjectCodes } },
+        { subject_code: 1 }
+    );
+
+    const existingSubjectCodes = new Set(
+        existingSubjects.map(s => s.subject_code)
+    );
+
+    const subjectsToInsert = [];
+
+    for (const sub of subjectData) {
+        const code = sub.subject_code?.trim();
+        const name = sub.name?.trim();
+
+        if (!code || !name) continue;
+        if (existingSubjectCodes.has(code)) continue;
+
+        existingSubjectCodes.add(code);
+
+        subjectsToInsert.push({
+            name,
+            subject_code: code,
+            year: sub.year,
+            type: sub.type,
+            dept: dept_id
+        });
+    }
+
+    if (subjectsToInsert.length === 0) {
+        return res.status(200).json(
+            new ApiResponse(200, [], "No new subjects to insert")
+        );
+    }
+
+    const insertedSubjects = await Subject.insertMany(subjectsToInsert);
+
+    return res.status(200).json(
+        new ApiResponse(200, insertedSubjects, "Successfully added subjects")
+    );
+});
+
+
 export const getDepartmentById = asyncHandler(async (req, res) => {
 
     const { dept_id } = req.params;
@@ -498,14 +600,6 @@ export const getDepartmentById = asyncHandler(async (req, res) => {
                         }
                     },
                     {
-                        $lookup: {
-                            from: "facultysubjects",
-                            localField: "_id",
-                            foreignField: "faculty",
-                            as: "facultysubjects"
-                        }
-                    },
-                    {
                         $project: {
                             isHOD: 1,
                             "user.fullname": 1,
@@ -515,7 +609,25 @@ export const getDepartmentById = asyncHandler(async (req, res) => {
                     }
                 ]
             }
-        }
+        },
+        {
+            $lookup: {
+                from: "subjects",
+                localField: "_id",
+                foreignField: "dept",
+                as: "subjects",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1,
+                            subject_code: 1,
+                            year: 1,
+                            type: 1
+                        }
+                    }
+                ]
+            }
+        },
     ]);
 
 
@@ -578,7 +690,6 @@ export const deleteDepartment = asyncHandler(async (req, res) => {
             facultySubject: { $in: facultySubjectIds }
         }, { session })
         await Response.deleteMany({ dept: dept_id }, { session })
-        await QuestionTemplate.deleteMany({ dept: dept_id }, { session })
         await Form.deleteMany({ dept: dept_id }, { session })
         await FacultySubject.deleteMany({ dept: dept_id }, { session })
         await Subject.deleteMany({ dept: dept_id }, { session })

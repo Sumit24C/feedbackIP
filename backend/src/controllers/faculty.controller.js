@@ -4,7 +4,7 @@ import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
 import { Department } from "../models/department.model.js"
-import { QuestionTemplate } from "../models/question_template.model.js"
+// import { QuestionTemplate } from "../models/question_template.model.js"
 import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
@@ -182,79 +182,6 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
         new ApiResponse(200, subjectMappings, "successfully fetched subjects mapping")
     );
 });
-
-export const getAllQuestionTemplates = asyncHandler(async (req, res) => {
-    const faculty = await Faculty.findOne({ user_id: req.user._id });
-    if (!faculty) {
-        throw new ApiError(404, "Faculty not found");
-    }
-
-    const department = await Department.findById(faculty.dept);
-    if (!department) {
-        throw new ApiError(404, "Department not found");
-    };
-
-    const questionTemplates = await QuestionTemplate.find().populate("question").sort({
-        createdAt: -1
-    });
-
-    if (!questionTemplates) {
-        throw new ApiError(500, "Failed to fetch question template");
-    }
-
-    return res.status(200).json(
-        new ApiResponse(200, questionTemplates, "successfully fetched question templates")
-    );
-});
-
-export const getQuestionTemplateById = asyncHandler(async (req, res) => {
-    const { question_template_id } = req.params;
-
-    const faculty = await Faculty.findOne({ user_id: req.user._id });
-    if (!faculty) {
-        throw new ApiError(404, "Faculty not found");
-    }
-
-    const department = await Department.findById(faculty.dept);
-    if (!department) {
-        throw new ApiError(404, "Department not found");
-    };
-
-    if (!question_template_id) {
-        throw new ApiError(403, "Department Id is required");
-    }
-
-    const questionTemplate = await QuestionTemplate.findById(question_template_id).populate("question");
-    if (!questionTemplate) {
-        throw new ApiError(404, "QuestionTemplate not found");
-    }
-
-    return res.status(200).json(
-        new ApiResponse(200, questionTemplate, "successfully fetched question template")
-    );
-});
-
-export const deleteQuestionTemplateById = asyncHandler(async (req, res) => {
-    const { question_template_id } = req.params;
-
-    if (!question_template_id) {
-        throw new ApiError(403, "Department Id is required");
-    }
-    const quesTemp = await QuestionTemplate.findById(question_template_id);
-    if (!quesTemp) {
-        throw new ApiError(404, "QuestionTemplate not found");
-    }
-    const quesId = quesTemp.question.map((q) => q._id);
-
-    await QuestionTemplate.findByIdAndDelete(question_template_id);
-    await Question.deleteMany({ _id: quesId });
-
-    return res.status(200).json(
-        new ApiResponse(200, {}, "successfully deleted question template")
-    );
-});
-
-
 
 export const getAllFacultyResultsForHOD = asyncHandler(async (req, res) => {
     const { form_id } = req.params;

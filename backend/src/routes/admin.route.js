@@ -1,8 +1,9 @@
 import { Router } from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 import {
-    addFaculty,
-    addStudents,
+    addFacultyFile,
+    addStudentFile,
+    addSubjectFile,
     createDept,
     deleteDepartment,
     editDepartment,
@@ -24,8 +25,9 @@ router.post("/", upload.fields([
 
 router.route("/").get(getDepartments);
 
-router.route("/add-students/:dept_id").post(upload.single('student'), addStudents);
-router.route("/add-faculties/:dept_id").post(upload.single('faculty'), addFaculty);
+router.route("/add-students/:dept_id").post(upload.single('students'), addStudentFile);
+router.route("/add-faculties/:dept_id").post(upload.single('faculties'), addFacultyFile);
+router.route("/add-subjects/:dept_id").post(upload.single('subjects'), addSubjectFile);
 router.route("/:dept_id").get(getDepartmentById).put(editDepartment).delete(deleteDepartment);
 router.route("/student/:dept_id").get(getStudentsByDept);
 router.route("/faculty/:dept_id").get(getFacultyByDept);

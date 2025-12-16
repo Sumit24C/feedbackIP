@@ -13,6 +13,7 @@ function Department() {
     const [uploading, setUpLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("students");
 
+    const [openSubjectModal, setOpenSubjectModal] = useState(false);
     const [openStudentModal, setOpenStudentModal] = useState(false);
     const [openFacultyModal, setOpenFacultyModal] = useState(false);
 
@@ -21,12 +22,13 @@ function Department() {
         try {
             const res = await axiosPrivate.get(`/admin/${dept_id}`);
             setDept(res.data.data);
+            console.log(res.data);
         } catch (err) {
             toast.error("Failed to load department");
         } finally {
             setLoading(false);
         }
-    };  
+    };
     useEffect(() => {
         fetchDepartment();
     }, [dept_id]);
@@ -52,7 +54,7 @@ function Department() {
             </div>
         );
     }
-    
+
     if (!dept) return <div className="p-6">Department not found</div>;
 
     const hod = dept.faculties.find((f) => f.isHOD);
@@ -60,7 +62,7 @@ function Department() {
     const handleStudentUpload = async (file) => {
         setUpLoading(true);
         const formData = new FormData();
-        formData.append("student", file);
+        formData.append("students", file);
 
         try {
             const res = await axiosPrivate.post(`/admin/add-students/${dept_id}`, formData);
@@ -77,7 +79,7 @@ function Department() {
     const handleFacultyUpload = async (file) => {
         setUpLoading(true);
         const formData = new FormData();
-        formData.append("faculty", file);
+        formData.append("faculties", file);
 
         try {
             const res = await axiosPrivate.post(`/admin/add-faculties/${dept_id}`, formData);
@@ -86,6 +88,23 @@ function Department() {
             fetchDepartment();
         } catch (e) {
             toast.error("Failed to upload faculties");
+        } finally {
+            setUpLoading(false);
+        }
+    };
+
+    const handleSubjectUpload = async (file) => {
+        setUpLoading(true);
+        const formData = new FormData();
+        formData.append("subjects", file);
+
+        try {
+            const res = await axiosPrivate.post(`/admin/add-subjects/${dept_id}`, formData);
+            toast.success(res.data.message);
+            setOpenSubjectModal(false);
+            fetchDepartment();
+        } catch (e) {
+            toast.error("Failed to upload subjects");
         } finally {
             setUpLoading(false);
         }
@@ -117,6 +136,12 @@ function Department() {
                     >
                         ➕ Add Faculties
                     </button>
+                    <button
+                        onClick={() => setOpenSubjectModal(true)}
+                        className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
+                    >
+                        ➕ Add Subjects
+                    </button>
                 </div>
             </div>
 
@@ -135,6 +160,13 @@ function Department() {
                     onClick={() => setActiveTab("faculties")}
                 >
                     Faculties
+                </button>
+                <button
+                    className={`px-4 py-2 rounded ${activeTab === "subjects" ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}
+                    onClick={() => setActiveTab("subjects")}
+                >
+                    Subjects
                 </button>
             </div>
 
@@ -173,17 +205,12 @@ function Department() {
                 <section>
                     <h2 className="text-xl font-semibold mb-3">Faculties</h2>
 
-                    <div className="overflow-x-auto overflow-y-scroll border rounded-lg h-80">
+                    <div className="w-70% overflow-y-scroll border rounded-lg h-80">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-gray-200">
                                 <tr>
                                     <th className="p-3">Name</th>
                                     <th className="p-3">Email</th>
-                                    <th className="p-3">Subjects</th>
-                                    <th className="p-3">Class Section</th>
-                                    <th className="p-3">Type</th>
-                                    <th className="p-3">Year</th>
-                                    <th className="p-3">Role</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -191,36 +218,35 @@ function Department() {
                                     <tr key={f._id} className="border-b hover:bg-gray-100">
                                         <td className="p-3">{f.user?.fullname}</td>
                                         <td className="p-3">{f.user?.email}</td>
-                                        <td className="p-3">
-                                            {f.facultysubjects.length
-                                                ? f.facultysubjects.map((s) => s.subject).join(", ")
-                                                : "—"}
-                                        </td>
-                                        <td className="p-3">
-                                            {f.facultysubjects.length
-                                                ? f.facultysubjects.map((s) => s.classSection).join(", ")
-                                                : "—"}
-                                        </td>
-                                        <td className="p-3">
-                                            {f.facultysubjects.length
-                                                ? f.facultysubjects.map((s) => s.formType).join(", ")
-                                                : "—"}
-                                        </td>
-                                        <td className="p-3">
-                                            {f.facultysubjects.length
-                                                ? f.facultysubjects.map((s) => s.year).join(", ")
-                                                : "—"}
-                                        </td>
-                                        <td className="p-3">
-                                            {f.isHOD ? (
-                                                <span className="text-sm px-2 py-1 bg-yellow-200 text-yellow-900 rounded">
-                                                    HOD
-                                                </span>
-                                            ) : (
-                                                "Faculty"
-                                            )}
-                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            )}
 
+            {activeTab === "subjects" && (
+                <section>
+                    <h2 className="text-xl font-semibold mb-3">Faculties</h2>
+
+                    <div className="w-70% overflow-y-scroll border rounded-lg h-80">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-200">
+                                <tr>
+                                    <th className="p-3">Name</th>
+                                    <th className="p-3">subject_code</th>
+                                    <th className="p-3">year</th>
+                                    <th className="p-3">type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {dept.subjects.map((sub) => (
+                                    <tr key={sub._id} className="border-b hover:bg-gray-100">
+                                        <td className="p-3">{sub.name}</td>
+                                        <td className="p-3">{sub.subject_code}</td>
+                                        <td className="p-3">{sub.year}</td>
+                                        <td className="p-3">{sub.type}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -238,6 +264,11 @@ function Department() {
                 isOpen={openFacultyModal}
                 onClose={() => setOpenFacultyModal(false)}
                 onUpload={handleFacultyUpload}
+            />
+            <UploadModal
+                isOpen={openSubjectModal}
+                onClose={() => setOpenSubjectModal(false)}
+                onUpload={handleSubjectUpload}
             />
 
         </div>

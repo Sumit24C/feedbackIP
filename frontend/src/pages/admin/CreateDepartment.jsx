@@ -11,13 +11,15 @@ export default function CreateDepartment() {
   const api = useAxiosPrivate();
 
   const [deptName, setDeptName] = useState("");
+  const [password, setPassword] = useState("");
   const [studentFile, setStudentFile] = useState(null);
   const [facultyFile, setFacultyFile] = useState(null);
+  const [subjectFile, setSubjectFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
-    if (!deptName || !studentFile || !facultyFile) {
+    if (!deptName || !studentFile || !facultyFile || !subjectFile) {
       toast.error("All fields are required");
       return;
     }
@@ -27,8 +29,10 @@ export default function CreateDepartment() {
 
       const form = new FormData();
       form.append("dept_name", deptName);
+      form.append("password", password);
       form.append("students", studentFile);
       form.append("faculties", facultyFile);
+      form.append("subjects", subjectFile);
 
       const res = await api.post("/admin", form, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -39,8 +43,9 @@ export default function CreateDepartment() {
       setDeptName("");
       setStudentFile(null);
       setFacultyFile(null);
-      const dept_id = res.data.data.updatedDepartment._id;
-      navigate(`/admin/department`);
+      setSubjectFile(null);
+      const dept_id = res.data.data.department._id;
+      navigate(`/admin/department/${dept_id}`);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to create department");
     } finally {
@@ -49,14 +54,14 @@ export default function CreateDepartment() {
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-start mt-10 bg-gradient-to-br from-blue-50 to-blue-100 p-6">
+    <div className="flex justify-center items-start bg-gradient-to-br from-blue-50 to-blue-100 p-6">
       <Card className="w-[480px] bg-white shadow-2xl rounded-3xl border-none">
 
-          <CardTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
-            <Building2 size={24} /> Create Department
-          </CardTitle>
+        <CardTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
+          <Building2 size={24} /> Create Department
+        </CardTitle>
 
-        <CardContent className="space-y-5 py-6">
+        <CardContent className="space-y-5 py-3">
 
           <div className="space-y-1">
             <label className="text-gray-700 font-medium">Department Name</label>
@@ -65,6 +70,16 @@ export default function CreateDepartment() {
               className="border-blue-300 focus:border-blue-600"
               value={deptName}
               onChange={(e) => setDeptName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-gray-700 font-medium">Department password</label>
+            <Input
+              type="password"
+              placeholder="Enter password"
+              className="border-blue-300 focus:border-blue-600"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
@@ -92,6 +107,21 @@ export default function CreateDepartment() {
               accept=".xlsx,.xls"
               className="border-blue-300 cursor-pointer bg-blue-50 hover:bg-blue-100 transition"
               onChange={(e) => setFacultyFile(e.target.files[0])}
+            />
+            <p className="text-xs text-gray-500">
+              Supported: .xlsx, .xls
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-gray-700 font-medium flex items-center gap-2">
+              <Upload size={18} /> Upload Subject Excel
+            </label>
+            <Input
+              type="file"
+              accept=".xlsx,.xls"
+              className="border-blue-300 cursor-pointer bg-blue-50 hover:bg-blue-100 transition"
+              onChange={(e) => setSubjectFile(e.target.files[0])}
             />
             <p className="text-xs text-gray-500">
               Supported: .xlsx, .xls

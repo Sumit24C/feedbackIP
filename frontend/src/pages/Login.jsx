@@ -83,7 +83,7 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 text-gray-500" size={18} />
                 <Input
-                  type="current-password"
+                  type="password"
                   className="pl-10 py-2 rounded-xl border-gray-300 focus:border-blue-600"
                   placeholder="Enter your password"
                   {...register("password", { required: "Password is required" })}

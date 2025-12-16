@@ -49,7 +49,7 @@ export default function FeedbackFormList() {
 
       {forms.length === 0 && (
         <div className="text-center text-gray-500 border rounded-lg p-10 bg-gray-50">
-          🎉 No forms assigned to you right now.
+          No forms assigned to you right now.
         </div>
       )}
 

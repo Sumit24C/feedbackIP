@@ -45,7 +45,7 @@ function FacultyProfilePage() {
 
     try {
       await axiosPrivate.post("/user/update-password", {
-        currentPassword: passwordForm.currentPassword,
+        oldPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
 

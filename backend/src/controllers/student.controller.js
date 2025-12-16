@@ -2,10 +2,8 @@ import mongoose from "mongoose"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
-import { User } from "../models/user.model.js"
 import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
-import { Faculty } from "../models/faculty.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
 import { getStudentYear } from "../utils/getStudentYear.js"
@@ -30,8 +28,20 @@ export const getFormById = asyncHandler(async (req, res) => {
     }
 
     let studentClassSection = student.classSection;
-    if (form.formType === "practical") {
-        studentClassSection = student.roll_no <= 36 ? `${studentClassSection}1` : `${studentClassSection}2`;
+    if (student.year != "FY") {
+        if (form.formType === "practical") {
+            studentClassSection = student.roll_no <= 36 ? `${studentClassSection}1` : `${studentClassSection}2`;
+        }
+    } else {
+        if (form.formType === "practical") {
+            if (student.roll_no <= 22) {
+                studentClassSection = `${studentClassSection}1`;
+            } else if (student.roll_no <= 36) {
+                studentClassSection = `${studentClassSection}2`;
+            } else {
+                studentClassSection = `${studentClassSection}3`;
+            }
+        }
     }
 
     const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });

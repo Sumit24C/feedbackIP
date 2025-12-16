@@ -7,45 +7,52 @@ const formSchema = new mongoose.Schema({
         trim: true,
         required: true,
     },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     dept: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Department"
     },
-    createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    },
-    formType: {
-        type: String,
-        enum: ["practical", "theory", "infrastructure", "quiz"],
+    deadline: {
+        type: Date,
         required: true
+    },
+    ratingConfig: {
+        min: { type: Number, required: true },
+        max: {
+            type: Number, required: true, validate: {
+                validator: function (v) {
+                    return v > this.ratingConfig.min;
+                },
+                message: "max must be greater than min"
+            }
+        },
     },
     questions: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Question"
     }],
-    deadline: {
-        type: Date,
-        required: true
-    },
-}, { timestamps: true })
-
-formSchema.pre("deleteMany", async function (next) {
-    try {
-        const filter = this.getFilter();
-        const forms = await mongoose.model("Form").find(filter);
-
-        const quesIds = forms.flatMap((form) => form.questions);
-
-        if (quesIds.length > 0) {
-            await mongoose.model("Question").deleteMany({ _id: { $in: quesIds } });
-        }
-        next();
-    } catch (err) {
-        next(err);
+    formType: {
+        type: String,
+        enum: ["practical", "theory", "infrastructure", "subject"],
     }
-});
+    
+}, { timestamps: true });
 
+formSchema.pre("findOneAndDelete", async function (next) {
+    const form = await this.model.findOne(this.getFilter());
+
+    if (form?.questions?.length) {
+        await mongoose.model("Question").deleteMany({
+            _id: { $in: form.questions }
+        });
+    }
+
+    next();
+});
 
 const Form = mongoose.model("Form", formSchema);
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,7 +11,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 function CreateFeedbackForm() {
   const { form_id } = useParams();
@@ -21,28 +21,14 @@ function CreateFeedbackForm() {
   const [title, setTitle] = useState("");
   const [formType, setFormType] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [ratingMin, setRatingMin] = useState(1);
+  const [ratingMax, setRatingMax] = useState(5);
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState("");
-  const [templates, setTemplates] = useState([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [loadingForm, setLoadingForm] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+
   const today = new Date().toISOString().split("T")[0];
-
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        const res = await axiosPrivate.get(`/faculty/q`);
-        setTemplates(res.data.data);
-      } catch {
-        toast.error("Failed to load question templates");
-      } finally {
-        setLoadingTemplates(false);
-      }
-    };
-
-    fetchTemplates();
-  }, [form_id]);
 
   useEffect(() => {
     if (!form_id) return;
@@ -56,15 +42,16 @@ function CreateFeedbackForm() {
         setTitle(form.title);
         setFormType(form.formType);
         setDeadline(form.deadline?.split("T")[0]);
+        setRatingMin(form.ratingConfig?.min ?? 1);
+        setRatingMax(form.ratingConfig?.max ?? 5);
 
         const formattedQuestions = form.questions.map((q) => ({
           questionText: q.questionText,
-          questionType: q.questionType,
           questionId: q._id,
         }));
 
         setQuestions(formattedQuestions);
-      } catch (e) {
+      } catch {
         toast.error("Failed to load form details");
       } finally {
         setLoadingForm(false);
@@ -75,24 +62,12 @@ function CreateFeedbackForm() {
   }, [form_id]);
 
   const handleAddQuestion = () => {
-    if (!newQuestion.trim()) return toast.error("Question cannot be empty");
+    if (!newQuestion.trim()) {
+      return toast.error("Question cannot be empty");
+    }
     setQuestions([...questions, { questionText: newQuestion }]);
     setNewQuestion("");
   };
-
-  const handleAddTemplate = (template) => {
-    if (!template?.question || template.question.length === 0)
-      return toast.error("Template has no questions");
-
-    const newQuestions = template.question.map((q) => ({
-      questionText: q.questionText,
-      questionId: q._id,
-      questionType: q.questionType || "rating",
-    }));
-
-    setQuestions((prev) => [...prev, ...newQuestions]);
-  };
-
 
   const removeQuestion = (index) => {
     setQuestions(questions.filter((_, i) => i !== index));
@@ -102,14 +77,23 @@ function CreateFeedbackForm() {
     if (!title || !formType || !deadline || questions.length === 0) {
       return toast.error("Please fill all fields & add at least 1 question");
     }
-    setSubmitLoading(true)
+
+    if (ratingMax <= ratingMin) {
+      return toast.error("Rating max must be greater than min");
+    }
+
+    if (!(ratingMin >= 1 && ratingMin < 10)) {
+      return toast.error("Enter a valid min rating");
+    }
+    if (!(ratingMax >= 2 && ratingMax <= 10)) {
+      return toast.error("Enter a valid max rating");
+    }
+
+    setSubmitLoading(true);
 
     const customQuestions = questions
       .filter((q) => !q.questionId)
-      .map((q) => ({
-        questionText: q.questionText,
-        questionType: q.questionType || "rating",
-      }));
+      .map((q) => ({ questionText: q.questionText }));
 
     const existingQuestionIds = questions
       .filter((q) => q.questionId)
@@ -122,6 +106,10 @@ function CreateFeedbackForm() {
         deadline,
         questions: customQuestions,
         questionsId: existingQuestionIds,
+        ratingConfig: {
+          min: ratingMin,
+          max: ratingMax,
+        },
       };
 
       if (form_id) {
@@ -140,136 +128,148 @@ function CreateFeedbackForm() {
     }
   };
 
-  const formMode = form_id ? "update" : "create";
+  if (loadingForm) {
+    return <div className="p-6 text-center">Loading form...</div>;
+  }
 
-  if (loadingForm) return <div className="p-4">Loading form...</div>;
   return (
-    <div className="p-4 max-w-3xl mx-auto space-y-4">
-      <div className="flex flex-col justify-center items-center">
-        <h1 className="text-xl font-bold text-center">
-          {form_id ? "✏️ Edit Form" : "Create Form"}
+    <div className="max-w-3xl mx-auto p-6 space-y-4">
+      <div className="text-center space-y-1">
+        <h1 className="text-2xl font-semibold text-gray-800">
+          {form_id ? "Edit Feedback Form" : "Create Feedback Form"}
         </h1>
-        <div className="w-30 border-1 border-blue-300"></div>
       </div>
 
-      <div>
-        <label className="block font-medium">Form Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full border p-2 rounded mt-1"
-        />
-      </div>
-      <div className="flex sm:flex-col sm:justify-start sm:items-baseline justify-between items-center space-y-1">
-        <label className="font-medium">Form Type: </label>
-        <Select onValueChange={(val) => setFormType(val)}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a form-type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>form type</SelectLabel>
-              <SelectItem value="theory">theory</SelectItem>
-              <SelectItem value="practical">practical</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="block font-medium">Deadline</label>
-        <input
-          type="date"
-          className="w-full border p-2 rounded mt-1"
-          value={deadline}
-          onChange={(e) => setDeadline(e.target.value)}
-          min={today}
-        />
-      </div>
-
-      <div className="border p-4 rounded space-y-3">
-        <label className="font-medium">Add Custom Question</label>
-        <div className="flex gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+        <div className="md:col-span-2">
+          <label className="text-sm font-medium">Form Title</label>
           <input
             type="text"
-            className="flex-1 border p-2 rounded"
-            value={newQuestion}
-            onChange={(e) => setNewQuestion(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 mt-1"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
-          <button
-            onClick={handleAddQuestion}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
-            Add
-          </button>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Form Type</label>
+          <Select value={formType} onValueChange={setFormType}>
+            <SelectTrigger className="w-full mt-1">
+              <SelectValue placeholder="Select form type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Form Type</SelectLabel>
+                <SelectItem value="theory">Theory</SelectItem>
+                <SelectItem value="practical">Practical</SelectItem>
+                <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                <SelectItem value="subject">Subject</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Deadline</label>
+          <input
+            type="date"
+            className="w-full border rounded-lg px-3 py-2 mt-1"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            min={today}
+          />
         </div>
       </div>
 
-      <div className="border p-4 rounded space-y-3">
-        <h2 className="font-medium mb-2">Use Question Templates</h2>
-
-        {loadingTemplates ? (
-          <div>Loading templates...</div>
-        ) : templates.length === 0 ? (
-          <p>No templates available</p>
-        ) : (
-          templates.map((t) => (
-            <div
-              key={t._id}
-              className="flex justify-between items-center border p-2 rounded"
-            >
-              <span>
-                {t.name} ({t.formType}) ({t.question.length} questions)
-              </span>
-              <button
-                onClick={() => handleAddTemplate(t)}
-                className="px-3 py-1 bg-green-600 text-white rounded"
-              >
-                Add
-              </button>
-            </div>
-          ))
-        )}
+      <h2 className="font-medium">Rating Scale</h2>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm">Min (1)</label>
+          <input
+            type="number"
+            min={1}
+            max={9}
+            className="w-full border rounded-lg px-3 py-2 mt-1"
+            value={ratingMin}
+            onChange={(e) => setRatingMin(Number(e.target.value))}
+          />
+        </div>
+        <div>
+          <label className="text-sm">Max (10)</label>
+          <input
+            type="number"
+            min={2}
+            max={10}
+            className="w-full border rounded-lg px-3 py-2 mt-1"
+            value={ratingMax}
+            onChange={(e) => setRatingMax(Number(e.target.value))}
+          />
+        </div>
       </div>
-      <div className="border p-4 rounded">
-        <h2 className="font-medium mb-3">Questions Added</h2>
+      <div className="border rounded-xl p-4 space-y-3">
+        <h2 className="font-medium">
+          Questions ({questions.length})
+        </h2>
 
         {questions.length === 0 ? (
-          <p>No questions added yet</p>
+          <p className="text-sm text-gray-500">No questions added yet</p>
         ) : (
           questions.map((q, i) => (
             <div
               key={i}
-              className="flex justify-between items-center border p-2 rounded mb-2"
+              className="flex justify-between items-center border rounded-lg px-3 py-2"
             >
               <span>{q.questionText}</span>
               <button
-                className="px-2 py-1 bg-red-500 text-white rounded"
                 onClick={() => removeQuestion(i)}
+                className="text-red-500"
               >
-                Remove
+                <Trash2 size={16} />
               </button>
             </div>
           ))
         )}
       </div>
 
+      <div className="border rounded-xl p-4 space-y-2">
+        <label className="text-sm font-medium">Add Question</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className="flex-1 border rounded-lg px-3 py-2"
+            placeholder="e.g. How was the teaching quality?"
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddQuestion();
+              }
+            }}
+          />
+          <button
+            onClick={handleAddQuestion}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+      </div>
+
       <button
         onClick={handleSubmit}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded flex items-center justify-center gap-2"
         disabled={submitLoading}
+        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium flex justify-center items-center gap-2"
       >
         {submitLoading ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            {formMode === "create" ? "Creating..." : "Updating..."}
+            <Loader2 className="animate-spin" size={18} />
+            {form_id ? "Updating..." : "Creating..."}
           </>
         ) : (
-          formMode === "create" ? "Create Form" : "Update Form"
+          form_id ? "Update Form" : "Create Form"
         )}
       </button>
-
     </div>
   );
 }

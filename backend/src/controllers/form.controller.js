@@ -5,60 +5,8 @@ import { ApiResponse } from "../utils/apiResponse.js"
 import { Department } from "../models/department.model.js"
 import { Question } from "../models/question.model.js";
 import { Form } from "../models/form.model.js";
-import { QuestionTemplate } from "../models/question_template.model.js";
 import { Faculty } from "../models/faculty.model.js";
 import { Response } from "../models/response.model.js";
-
-export const createQuestionTemplate = asyncHandler(async (req, res) => {
-    const faculty = await Faculty.findOne({ user_id: req.user._id });
-    if (!faculty) {
-        throw new ApiError(404, "Faculty not found");
-    }
-
-    const department = await Department.findById(faculty.dept);
-    if (!department) {
-        throw new ApiError(404, "Department not found");
-    }
-    const { questions, formType, name } = req.body;
-
-    if (!formType || !name) {
-        throw new ApiError(403, "Form type and Name is required");
-    }
-
-    if (!questions || !Array.isArray(questions) || questions.length === 0) {
-        throw new ApiError(400, "Please provide an array of questions");
-    }
-
-    for (const q of questions) {
-        if (!q.questionText || !q.questionType) {
-            throw new ApiError(400, "Each question must have questionText and questionType");
-        }
-    }
-
-    const formattedQuestions = questions.map((q) => ({
-        ...q, createdBy: req.user._id
-    }));
-
-    const createdQuestions = await Question.insertMany(formattedQuestions);
-    if (!createdQuestions) {
-        throw new ApiError(500, "Failed to create questions");
-    }
-    const createdQuestionsId = createdQuestions.map((q) => q._id);
-
-    const createdQuestionTemplate = await QuestionTemplate.create({
-        name: name,
-        question: createdQuestionsId,
-        formType: formType,
-        createdBy: req.user._id,
-        dept: department._id,
-    });
-    if (!createdQuestionTemplate) {
-        throw new ApiError(500, "Failed to question template");
-    }
-    return res.status(200).json(
-        new ApiResponse(200, createdQuestionTemplate, "successfully created question template")
-    );
-});
 
 export const createForm = asyncHandler(async (req, res) => {
     const faculty = await Faculty.findOne({ user_id: req.user._id });
@@ -71,43 +19,53 @@ export const createForm = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
-    let { title, formType, questions = [], questionsId = [], deadline } = req.body;
-    if ([title, formType, deadline]
-        .some((field) => !field || field.trim() === "")) {
-        throw new ApiError(403, "All fields are required");
-    };
+    const { title, questions = [], deadline, ratingConfig, formType } = req.body;
 
-    if (!Array.isArray(questionsId)) {
-        throw new ApiError(403, "Question IDs must be an array");
-    };
+    if (!title || !deadline || !formType) {
+        throw new ApiError(403, "Title, form type, and deadline are required");
+    }
 
-    let createdQuestions = [];
-    if (Array.isArray(questions) && questions.length > 0) {
-        const formattedQuestions = questions.map((q) => ({ ...q, createdBy: req.user._id }));
-        createdQuestions = await Question.insertMany(formattedQuestions);
-        if (!createdQuestions || createdQuestions.length === 0) {
-            throw new ApiError(500, "Failed to create new questions");
+    if (
+        !ratingConfig ||
+        ratingConfig.min == null ||
+        ratingConfig.max == null ||
+        ratingConfig.max <= ratingConfig.min
+    ) {
+        throw new ApiError(403, "Invalid rating configuration");
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+        throw new ApiError(403, "At least one question is required");
+    }
+
+    const formattedQuestions = questions.map((q) => {
+        if (!q.questionText || q.questionText.trim() === "") {
+            throw new ApiError(403, "Question text is required");
         }
-        questionsId = questionsId.concat(createdQuestions.map((q) => q._id));
-    };
-
-    const createdForm = await Form.create({
-        title,
-        formType,
-        deadline,
-        questions: questionsId,
-        dept: faculty.dept,
-        createdBy: req.user._id,
+        return {
+            questionText: q.questionText.trim()
+        };
     });
 
-    if (!createdForm) {
-        throw new ApiError(500, "Failed to create new form");
-    };
+    const createdQuestions = await Question.insertMany(formattedQuestions);
 
-    return res.status(200).json(
-        new ApiResponse(200, createdForm, "successfully created form")
+    const questionIds = createdQuestions.map(q => q._id);
+
+    const createdForm = await Form.create({
+        title: title.trim(),
+        deadline,
+        createdBy: req.user._id,
+        dept: department._id,
+        formType,
+        ratingConfig,
+        questions: questionIds
+    });
+
+    return res.status(201).json(
+        new ApiResponse(201, createdForm, "Form created successfully")
     );
 });
+
 
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id } = req.params;
@@ -119,7 +77,7 @@ export const getFormById = asyncHandler(async (req, res) => {
     const form = await Form.findById(form_id)
         .populate({
             path: "questions",
-            select: "questionText questionType"
+            select: "questionText"
         });
 
     if (!form) {
@@ -142,11 +100,15 @@ export const updateForm = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Form not found");
     }
 
-    let { title, formType, questions = [], questionsId = [], deadline } = req.body;
+    let { title, formType, questions = [], questionsId = [], deadline, ratingConfig } = req.body;
     if ([title, formType, deadline]
         .some((field) => !field || field.trim() === "")) {
         throw new ApiError(403, "All fields are required");
     }
+
+    if (!ratingConfig || ratingConfig.min === null || ratingConfig.max === null) {
+        throw new ApiError(403, "Invalid ratings");
+    };
 
     if (!Array.isArray(questionsId)) {
         throw new ApiError(403, "Question IDs must be an array");
@@ -154,13 +116,12 @@ export const updateForm = asyncHandler(async (req, res) => {
 
     let createdQuestions = [];
     if (Array.isArray(questions) && questions.length > 0) {
-        const formattedQuestions = questions.map((q) => ({ ...q, createdBy: req.user._id }));
-        createdQuestions = await Question.insertMany(formattedQuestions);
+        createdQuestions = await Question.insertMany(questions);
         if (!createdQuestions || createdQuestions.length === 0) {
             throw new ApiError(500, "Failed to create new questions");
         }
-        questionsId = questionsId.concat(createdQuestions.map((q) => q._id));
     };
+    questionsId = questionsId.concat(createdQuestions.map((q) => q._id));
 
     const updatedForm = await Form.findByIdAndUpdate(
         form.id,
@@ -169,6 +130,7 @@ export const updateForm = asyncHandler(async (req, res) => {
             formType,
             deadline,
             questions: questionsId,
+            ratingConfig: ratingConfig
         },
         {
             new: true
@@ -237,7 +199,7 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
                                 $map: {
                                     input: "$responses",
                                     as: "r",
-                                    in: "$$r.student"  
+                                    in: "$$r.student"
                                 }
                             },
                             []
@@ -251,7 +213,7 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
                 title: 1,
                 deadline: 1,
                 formType: 1,
-                responseCount: "$uniqueStudents", 
+                responseCount: "$uniqueStudents",
                 createdAt: 1
             }
         },

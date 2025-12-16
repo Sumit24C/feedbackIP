@@ -19,15 +19,14 @@ const responseSchema = new mongoose.Schema({
     },
     responses: [
         {
-            questionId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Question",
+            questionText: {
+                type: String,
                 required: true,
             },
             answer: {
-                type: mongoose.Schema.Types.Mixed,
-                required: true,
-            },
+                type: Number,
+                required: true
+            }
         },
     ],
 }, { timestamps: true });
