@@ -3,17 +3,24 @@ import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
 
 const Dashboard = () => {
-  const [subjects, setSubjects] = useState([]);
-  const axios = useAxiosPrivate();
+  const [facultySubjects, setFacultySubjects] = useState([]);
+  const api = useAxiosPrivate();
   const navigate = useNavigate();
   const location = useLocation();
   const { form_id } = useParams();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`/faculty/${form_id}`)
-      .then((res) => setSubjects(res.data.data))
-      .catch((err) => console.error(err));
+    ; (async function () {
+      try {
+        const res = await api.get(`/faculty/${form_id}`)
+        setFacultySubjects(res.data.data)
+      } catch (error) {
+        console.error(err)
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   return (
@@ -35,16 +42,16 @@ const Dashboard = () => {
         <hr className="my-3" />
         <h4 className="text-xs uppercase text-gray-500 mb-2">Subjects</h4>
 
-        {subjects.map((sub) => {
+        {facultySubjects.map((fs) => {
           const active =
             location.pathname ===
-            `/faculty/dashboard/${form_id}/subject/${sub._id}`;
+            `/faculty/dashboard/${form_id}/subject/${fs._id}`;
 
           return (
             <div
-              key={sub._id}
+              key={fs._id}
               onClick={() =>
-                navigate(`/faculty/dashboard/${form_id}/subject/${sub._id}`)
+                navigate(`/faculty/dashboard/${form_id}/subject/${fs._id}`)
               }
               className={`p-2 rounded-md cursor-pointer mb-1 text-sm transition-all 
               ${active
@@ -52,7 +59,7 @@ const Dashboard = () => {
                   : "hover:bg-blue-100 text-gray-700"
                 }`}
             >
-              {sub.subject} - {sub.classSection} ({sub.formType})
+              {fs.subject.name} - {fs.classSection} ({fs.formType})
             </div>
           );
         })}

@@ -8,7 +8,7 @@ import {
     NotFound
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
-import { CreateDepartment, AdminDashboard, Department, DepartmentList } from './pages/admin'
+import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject } from './pages/admin'
 import { FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage } from './pages/student'
 import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyDashboard, FacultyProfilePage, OverallSummary, Questions, QuestionSummary, CreateAttendance, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import NoAccess from './pages/NoAccess'
@@ -24,6 +24,7 @@ function AppRouter() {
                             <Route path='dashboard' element={<AdminDashboard />} />
                             <Route path='create-department' element={<CreateDepartment />} />
                             <Route path='department' element={<DepartmentList />} />
+                            <Route path='faculty-subject' element={<UploadFacultySubject />} />
                             <Route path='department/:dept_id' element={<Department />} />
                         </Route>
 

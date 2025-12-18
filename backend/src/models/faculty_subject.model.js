@@ -18,6 +18,16 @@ const facultySubjectSchema = new mongoose.Schema({
         enum: ["theory", "practical"],
         default: "theory"
     },
+    classDepartment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Department",
+        required: true
+    },
+    classYear: {
+        type: String,
+        enum: ["FY", "SY", "TY", "BY"],
+        required: true
+    }
 }, { timestamps: true });
 
 facultySubjectSchema.plugin(mongooseAggregatePaginate);

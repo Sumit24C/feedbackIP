@@ -29,6 +29,7 @@ function Header() {
     admin: [
       { path: "/admin/create-department", name: "Create Dept" },
       { path: "/admin/department", name: "Departments" },
+      { path: "/admin/faculty-subject", name: "Faculty-Subject" },
     ],
     faculty: [
       { path: "/faculty/all-forms", name: "All Forms" },

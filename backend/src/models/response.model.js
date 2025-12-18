@@ -17,10 +17,11 @@ const responseSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "FacultySubject",
     },
-    responses: [
+    ratings: [
         {
-            questionText: {
-                type: String,
+            questionId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Question",
                 required: true,
             },
             answer: {

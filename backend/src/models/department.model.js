@@ -6,6 +6,11 @@ const departmentSchema = new mongoose.Schema({
         unique: true,
         required: true
     },
+    code: {
+        type: String,
+        unique: true,
+        required: true
+    },
     hod: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Faculty",

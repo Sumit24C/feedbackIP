@@ -32,20 +32,63 @@ const OverallSummary = () => {
       .catch(() => setLoading(false));
   }, [form_id]);
 
-  const labels = graphData.map((item) => item.classSection);
-  const values = graphData.map((item) => Number(item.avgRating) || 0);
+  const labels = graphData.map((item) => item._id);
+  const avgRatings = graphData.map((item) => Number(item.avgRating) || 0);
+  const totalResponses = graphData.map(
+    (item) => Number(item.totalResponses) || 0
+  );
 
   const chartData = {
     labels,
     datasets: [
       {
-        label: "Average Rating (Class-wise)",
-        data: values,
+        label: "Average Rating",
+        data: avgRatings,              
         backgroundColor: "#4f8cff",
-        borderWidth: 1,
+        borderRadius: 6,
       },
     ],
   };
+
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: false, // cleaner UI
+      },
+      tooltip: {
+        callbacks: {
+          title: (tooltipItems) => {
+            return `Class ${tooltipItems[0].label}`;
+          },
+          label: (tooltipItem) => {
+            const index = tooltipItem.dataIndex;
+            return [
+              `Average Rating: ${avgRatings[index].toFixed(2)}`,
+              `Total Responses: ${totalResponses[index]}`,
+            ];
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: "black" },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        max: 5, // ⭐ rating scale (important UX)
+        ticks: {
+          stepSize: 1,
+          color: "black",
+        },
+      },
+    },
+  };
+
+
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center">
@@ -61,13 +104,7 @@ const OverallSummary = () => {
         <div className="w-[80%]">
           <Bar
             data={chartData}
-            options={{
-              plugins: { legend: { labels: { color: "black" } } },
-              scales: {
-                x: { ticks: { color: "black" } },
-                y: { ticks: { color: "black" } },
-              },
-            }}
+            options={options}
           />
         </div>
       )}

@@ -7,219 +7,179 @@ import { Loader2 } from "lucide-react";
 function FeedbackForm() {
   const { form_id } = useParams();
   const navigate = useNavigate();
-  const axios = useAxiosPrivate();
+  const api = useAxiosPrivate();
 
   const [formData, setFormData] = useState(null);
-  const [responses, setResponses] = useState({});
+  const [facultySubjectResponse, setFacultySubjectResponse] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
-    axios
-      .get(`/student/${form_id}`)
-      .then((res) => setFormData(res.data.data))
-      .catch((err) => {
-        alert(extractErrorMsg(err));
-        console.error(err);
-      })
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const res = await api.get(`/student/${form_id}`);
+        setFormData(res.data.data);
+      } catch (error) {
+        alert(extractErrorMsg(error));
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const handleRatingChange = (subjectId, questionId, value) => {
-    setResponses((prev) => ({
-      ...prev,
-      [subjectId]: {
-        ...prev[subjectId],
-        [questionId]: value,
-      },
-    }));
-  };
+  const handleRating = (fsId, qId, val) => {
+    setFacultySubjectResponse((prev) => {
+      const fsIndex = prev.findIndex((p) => p._id === fsId);
 
-  const handleBulkRating = (subjectId, value) => {
-    setResponses((prev) => {
-      const updated = { ...(prev[subjectId] || {}) };
-      formData?.questions.forEach((q) => {
-        updated[q.questionId] = value;
+      if (fsIndex === -1) {
+        return [
+          ...prev,
+          {
+            _id: fsId,
+            ratings: [{ questionId: qId, answer: val }],
+          },
+        ];
+      }
+
+      return prev.map((fs) => {
+        if (fs._id !== fsId) return fs;
+
+        const ratingIndex = fs.ratings.findIndex(
+          (r) => r.questionId === qId
+        );
+
+        if (ratingIndex !== -1) {
+          const updated = [...fs.ratings];
+          updated[ratingIndex] = { questionId: qId, answer: val };
+          return { ...fs, ratings: updated };
+        }
+
+        return {
+          ...fs,
+          ratings: [...fs.ratings, { questionId: qId, answer: val }],
+        };
       });
-      return { ...prev, [subjectId]: updated };
     });
-  };
-
-  const isFormComplete = () => {
-    return formData?.subjects.every((sub) =>
-      formData?.questions.every((q) =>
-        responses[sub.subjectMappingId]?.[q.questionId]
-      )
-    );
   };
 
   const handleSubmit = async () => {
     setSubmitLoading(true);
     try {
-      if (!isFormComplete()) {
-        alert("Please rate all questions for all subjects.");
-        return;
-      }
-
-      const subjectsPayload = formData?.subjects.map((sub) => ({
-        subjectMappingId: sub.subjectMappingId,
-        responses: Object.entries(responses[sub.subjectMappingId] || {}).map(
-          ([qId, ans]) => ({
-            questionId: qId,
-            answer: ans,
-          })
-        ),
-      }));
-
-      const res = await axios.post(`/student/${form_id}`, {
-        subjects: subjectsPayload,
-      });
-
-      if (res.data?.message === "Form is expired") {
-        alert("❌ Form is expired!");
-      } else {
-        alert("✅ Feedback submitted successfully");
-        navigate("/student/forms");
-      }
-    } catch (error) {
+      await api.post(`/student/${form_id}`, facultySubjectResponse);
+      alert("✅ Feedback submitted successfully");
+      navigate("/student/forms");
+    } catch {
       alert("Something went wrong while submitting.");
     } finally {
-      setSubmitLoading(false)
+      setSubmitLoading(false);
     }
   };
 
+  const expired =
+    formData?.deadline && new Date(formData.deadline) < new Date();
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center gap-4 mt-32">
-        <div className="w-14 h-14 border-4 border-transparent border-t-indigo-500 border-l-indigo-400 rounded-full animate-spin" />
-
-        <div className="text-indigo-600 font-medium text-lg animate-pulse tracking-wide">
-          Loading feedback forms...
-        </div>
-      </div>
-    );
-
-  if (formData?.status === "submitted") {
-    return (
-      <div className="text-center p-10 font-medium text-green-700">
-        Feedback already submitted 🎉
+      <div className="flex flex-col items-center justify-center mt-32 gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+        <p className="text-blue-600 font-medium">Loading feedback form...</p>
       </div>
     );
   }
 
-  const expired = new Date(formData?.deadline) < new Date();
-
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center">
-      <div className="max-w-5xl w-full bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-6">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-4 sm:p-8">
 
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">{formData?.title}</h2>
-          <p
-            className={`text-sm mt-1 font-medium ${expired ? "text-red-600" : "text-gray-600"
-              }`}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {formData.title}
+          </h2>
+          <span
+            className={`inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full
+              ${expired
+                ? "bg-red-100 text-red-700"
+                : "bg-gray-100 text-gray-700"
+              }
+            `}
           >
-            Deadline: {new Date(formData?.deadline).toLocaleDateString()}
-          </p>
+            Deadline: {new Date(formData.deadline).toLocaleDateString()}
+          </span>
         </div>
 
-        <div className="space-y-10">
-          {formData?.subjects.map((sub) => (
-            <div key={sub.subjectMappingId} className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {sub.subject}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Faculty: <span className="font-medium">{sub.facultyName}</span>
-                  </p>
-                </div>
-
-                <select
-                  className="px-3 py-2 rounded-md border border-gray-300 text-sm 
-                  bg-white focus:ring-2 ring-blue-500 focus:outline-none"
-                  onChange={(e) =>
-                    handleBulkRating(sub.subjectMappingId, e.target.value)
-                  }
-                >
-                  <option value="">Rate All</option>
-                  {[4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <option key={num} value={num}>
-                      {num}
-                    </option>
-                  ))}
-                </select>
+        <div className="space-y-8">
+          {formData.facultySubjects.map((fs) => (
+            <div
+              key={fs._id}
+              className="bg-gray-50 rounded-xl border p-4 sm:p-6 space-y-4"
+            >
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {fs.subject.name}
+                </h3>
+                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full inline-block mt-1">
+                  Faculty: {fs.facultyName}
+                </span>
               </div>
 
-              <table className="w-full border-collapse">
-                <thead className="bg-gray-100 rounded-md">
-                  <tr className="text-left text-sm text-gray-600">
-                    <th className="p-3">Question</th>
-                    <th className="p-3 text-center">Rating (4–10)</th>
-                  </tr>
-                </thead>
+              {formData.questions.map((q, i) => (
+                <div
+                  key={q.questionId}
+                  className="bg-white rounded-lg border p-4 space-y-2"
+                >
+                  <p className="text-sm font-medium text-gray-800">
+                    {i + 1}. {q.text}
+                  </p>
 
-                <tbody>
-                  {formData?.questions.map((q) => (
-                    <tr
-                      key={q.questionId}
-                      className="border-b last:border-none hover:bg-gray-50 transition"
-                    >
-                      <td className="p-3 text-gray-800">{q.text}</td>
-                      <td className="p-2 text-center">
-                        <select
-                          required
-                          className="px-3 py-2 rounded-md border border-gray-300 text-sm bg-white
-                          focus:outline-none focus:ring-2 ring-blue-500"
-                          value={
-                            responses[sub.subjectMappingId]?.[q.questionId] || ""
-                          }
-                          onChange={(e) =>
-                            handleRatingChange(
-                              sub.subjectMappingId,
-                              q.questionId,
-                              e.target.value
-                            )
-                          }
-                        >
-                          <option value="">Select</option>
-                          {[4, 5, 6, 7, 8, 9, 10].map((num) => (
-                            <option key={num} value={num}>
-                              {num}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  <select
+                    defaultValue=""
+                    onChange={(e) =>
+                      handleRating(
+                        fs._id,
+                        q.questionId,
+                        Number(e.target.value)
+                      )
+                    }
+                    className="w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="" disabled>
+                      Select rating
+                    </option>
 
+                    {Array.from(
+                      {
+                        length:
+                          formData.ratingConfig.max -
+                          formData.ratingConfig.min +
+                          1,
+                      },
+                      (_, i) => formData.ratingConfig.min + i
+                    ).map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
           ))}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={!isFormComplete() || loading}
-          className={`w-full mt-10 py-3 text-lg rounded-xl font-semibold flex items-center justify-center gap-2 transition
-    ${isFormComplete() && !loading
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-300 text-gray-600 cursor-not-allowed"
-            }`}
-        >
-          {submitLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Submitting...
-            </>
-          ) : (
-            "Submit Feedback"
-          )}
-        </button>
-
+        <div className="sticky bottom-0 bg-white border-t mt-8 pt-4 pb-2">
+          <button
+            onClick={handleSubmit}
+            disabled={submitLoading}
+            className={`w-full py-4 rounded-xl text-lg font-semibold text-white transition
+              ${submitLoading
+                ? "bg-blue-400 cursor-not-allowed"
+                : "bg-blue-600 active:scale-[0.98]"
+              }
+            `}
+          >
+            {submitLoading ? "Submitting..." : "Submit Feedback"}
+          </button>
+        </div>
       </div>
     </div>
   );

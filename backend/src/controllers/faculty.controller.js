@@ -15,7 +15,7 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
 
     const { form_id } = req.params;
     if (!form_id) {
-        throw new ApiError(403, "Form Id is required");
+        throw new ApiError(400, "Form Id is required");
     };
 
     const form = await Form.findById(form_id);
@@ -23,18 +23,36 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Form not found");
     };
 
+    const faculty = await Faculty.findOne({ user_id: req?.user?._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
+    }
+
+    const facultySubjects = await FacultySubject.find({ faculty: faculty._id });
+    const facultySubjectIds = facultySubjects.map((fs) => fs._id);
+
     const overallSummary = await Response.aggregate([
         {
             $match: {
-                form: new mongoose.Types.ObjectId(form_id)
+                form: new mongoose.Types.ObjectId(form_id),
+                facultySubject: { $in: facultySubjectIds }
             }
         },
-        { $unwind: "$responses" },
+        {
+            $lookup: {
+                from: "facultysubjects",
+                localField: "facultySubject",
+                foreignField: "_id",
+                as: "facultySubjectData"
+            }
+        },
+        { $unwind: "$facultySubjectData" },
+        { $unwind: "$ratings" },
         {
             $addFields: {
-                "responses.answer": {
+                "ratings.answer": {
                     $convert: {
-                        input: "$responses.answer",
+                        input: "$ratings.answer",
                         to: "double",
                         onError: null,
                         onNull: null
@@ -42,43 +60,30 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                 }
             }
         },
-        {
-            $lookup: {
-                from: "facultysubjects",
-                localField: "subjectMapping",
-                foreignField: "_id",
-                as: "subject"
-            }
-        },
-        { $unwind: "$subject" },
-        {
-            $group: {
-                _id: "$subject.classSection",
-                avgRating: { $avg: "$responses.answer" },
-                totalResponses: { $sum: 1 }
-            }
-        },
-
-        {
-            $project: {
-                classSection: "$_id",
-                avgRating: 1,
-                totalResponses: 1,
-                _id: 0
-            }
-        },
-
+        { $unwind: "$facultySubjectData" },
         {
             $sort: { classSection: 1 }
-        }
+        },
+        {
+            $group: {
+                _id: {
+                    classSection: "$facultySubjectData.classSection",
+                    student: "$student",
+                },
+                avgRatingPerStudent: { $avg: "$ratings.answer" }
+            }
+        },
+        {
+            $group: {
+                _id: "$_id.classSection",
+                totalResponses: { $sum: 1 },
+                avgRating: { $avg: "$avgRatingPerStudent" },
+            }
+        },
     ]);
 
-
-
     if (overallSummary.length === 0) {
-        return res.status(200).json(
-            new ApiResponse(200, [], "No feedback submitted yet")
-        );
+        throw new ApiError(500, "Failed to fetch overall summary");
     }
 
     return res.status(200).json(
@@ -108,16 +113,15 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
         {
             $match: {
                 form: new mongoose.Types.ObjectId(form_id),
-                subjectMapping: new mongoose.Types.ObjectId(subject_mapping_id),
+                facultySubject: new mongoose.Types.ObjectId(subject_mapping_id),
             }
         },
-
-        { $unwind: "$responses" },
+        { $unwind: "$ratings" },
         {
             $addFields: {
-                "responses.answer": {
+                "ratings.answer": {
                     $convert: {
-                        input: "$responses.answer",
+                        input: "$ratings.answer",
                         to: "double",
                         onError: null,
                         onNull: null
@@ -125,11 +129,10 @@ export const getFeedbackResultBySubjects = asyncHandler(async (req, res) => {
                 }
             }
         },
-
         {
             $group: {
-                _id: "$responses.questionId",
-                avgRating: { $avg: "$responses.answer" },
+                _id: "$ratings.questionId",
+                avgRating: { $avg: "$ratings.answer" },
                 totalResponses: { $sum: 1 }
             }
         },
@@ -171,11 +174,9 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
     if (!form) {
         throw new ApiError(404, "Form not found");
     }
-    const subjectMappings = await FacultySubject.find({ faculty: faculty._id, formType: form.formType }).populate("dept");
+    const subjectMappings = await FacultySubject.find({ faculty: faculty._id, formType: form.formType }).populate("classDepartment subject", "name");
     if (subjectMappings.length === 0) {
-        return res.status(200).json(
-            new ApiResponse(200, [], "No subjects assigned to this faculty")
-        );
+        throw new ApiError(404, "No Subjects found");
     }
 
     return res.status(200).json(
@@ -210,7 +211,7 @@ export const getAllFacultyResultsForHOD = asyncHandler(async (req, res) => {
         {
             $group: {
                 _id: "$subjectMapping",
-                avgRating: { $avg: "$responses.answer" },
+                avgRating: { $avg: "$ratings.answer" },
                 totalResponses: { $sum: 1 }
             }
         },

@@ -7,6 +7,7 @@ import { Response } from "../models/response.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
 import { getStudentYear } from "../utils/getStudentYear.js"
+import { Subject } from "../models/subject.model.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id } = req.params;
@@ -18,7 +19,6 @@ export const getFormById = asyncHandler(async (req, res) => {
     if (!form) {
         throw new ApiError(404, "Form not found");
     };
-
     const student = await Student.findOne({ user_id: req.user._id });
     if (!student) {
         throw new ApiError(404, "Student not found");
@@ -56,41 +56,70 @@ export const getFormById = asyncHandler(async (req, res) => {
         );
     };
     const studentYear = getStudentYear(student);
+
     const facultiesSubject = await FacultySubject.aggregate([
         {
             $match: {
-                dept: new mongoose.Types.ObjectId(form.dept),
-                classSection: studentClassSection,
+                classDepartment: student.dept,
+                classSection: studentClassSection.trim(),
                 formType: form.formType,
-                year: studentYear
+                classYear: studentYear,
             }
         },
+        {
+            $lookup: {
+                from: "subjects",
+                localField: "subject",
+                foreignField: "_id",
+                as: "subject",
+                pipeline: [
+                    {
+                        $project: {
+                            dept: 1,
+                            name: 1,
+                            subject_code: 1,
+                            type: 1,
+                        }
+                    }
+                ]
+            }
+        },
+        { $unwind: "$subject" },
         {
             $lookup: {
                 from: "faculties",
                 localField: "faculty",
                 foreignField: "_id",
-                as: "facultyData"
+                as: "facultyData",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        email: 1,
+                                        fullname: 1
+                                    }
+                                },
+                            ]
+                        }
+                    }
+                ]
             }
         },
         { $unwind: "$facultyData" },
-        {
-            $lookup: {
-                from: "users",
-                localField: "facultyData.user_id",
-                foreignField: "_id",
-                as: "userData"
-            }
-        },
-        { $unwind: "$userData" },
+        { $unwind: "$facultyData.user" },
         {
             $project: {
-                subject: 1,
-                classSection: 1,
-                formType: 1,
-                year: 1,
                 facultyId: "$facultyData._id",
-                facultyName: "$userData.fullname"
+                facultyName: "$facultyData.user.fullname",
+                subject: 1,
+                classYear: 1,
+                classSection: 1,
             }
         }
     ]);
@@ -104,19 +133,13 @@ export const getFormById = asyncHandler(async (req, res) => {
         title: form.title,
         deadline: form.deadline,
         formType: form.formType,
+        ratingConfig: form.ratingConfig,
         questions: form.questions.map(q => ({
             questionId: q._id,
             text: q.questionText,
             type: q.questionType
         })),
-        subjects: facultiesSubject.map(s => ({
-            subjectMappingId: s._id,
-            subject: s.subject,
-            classSection: s.classSection,
-            year: s.year,
-            facultyId: s.facultyId,
-            facultyName: s.facultyName,
-        })),
+        facultySubjects: facultiesSubject
     };
 
     return res.status(200).json(
@@ -156,8 +179,7 @@ export const getForms = asyncHandler(async (req, res) => {
 
 export const submitResponse = asyncHandler(async (req, res) => {
     const { form_id } = req.params;
-    const { subjects } = req.body;
-
+    const facultySubjectResponse = req.body;
     if (!form_id) {
         throw new ApiError(403, "Form Id is required");
     };
@@ -187,12 +209,12 @@ export const submitResponse = asyncHandler(async (req, res) => {
         );
     };
 
-    const responseDocs = subjects.map((s) => ({
+    const responseDocs = facultySubjectResponse.map((fs) => ({
         dept: student.dept,
         form: form._id,
         student: student._id,
-        subjectMapping: s.subjectMappingId,
-        responses: s.responses,
+        facultySubject: fs._id,
+        ratings: fs.ratings,
     }));
 
     const savedResponses = await Response.insertMany(responseDocs);

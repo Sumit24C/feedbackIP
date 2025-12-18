@@ -10,7 +10,8 @@ import {
     getDepartmentById,
     getDepartments,
     getFacultyByDept,
-    getStudentsByDept
+    getStudentsByDept,
+    uploadFacultySubjects
 } from "../controllers/admin.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyRole } from "../middlewares/role.middleware.js";
@@ -22,8 +23,9 @@ router.post("/", upload.fields([
     { name: "faculties", maxCount: 1 },
     { name: "subjects", maxCount: 1 },
 ]), createDept);
-
 router.route("/").get(getDepartments);
+
+router.post("/faculty-subjects", upload.single("facultysubjects"), uploadFacultySubjects);
 
 router.route("/add-students/:dept_id").post(upload.single('students'), addStudentFile);
 router.route("/add-faculties/:dept_id").post(upload.single('faculties'), addFacultyFile);

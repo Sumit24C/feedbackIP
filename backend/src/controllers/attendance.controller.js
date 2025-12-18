@@ -487,7 +487,6 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
         if (!facultySubject) {
             throw new ApiError(404, "Faculty not found for this subject");
         }
-        console.log(facultySubject);
 
         const academic_year = getStudentAcademicYear(facultySubject.subject.year);
         const student = await Student.find({

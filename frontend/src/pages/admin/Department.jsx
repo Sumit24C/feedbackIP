@@ -22,7 +22,6 @@ function Department() {
         try {
             const res = await axiosPrivate.get(`/admin/${dept_id}`);
             setDept(res.data.data);
-            console.log(res.data);
         } catch (err) {
             toast.error("Failed to load department");
         } finally {

@@ -17,9 +17,9 @@ import { OAuth } from "../models/oauth.model.js";
 import { Attendance } from "../models/attendance.model.js"
 
 export const createDept = asyncHandler(async (req, res) => {
-    const { dept_name, password } = req.body;
-    if (!dept_name || !dept_name.trim() || !password || !password.trim()) {
-        throw new ApiError(400, "department name and password are required");
+    const { dept_name, password, dept_code } = req.body;
+    if (!dept_name || !dept_name.trim() || !dept_code || !dept_code.trim() || !password || !password.trim()) {
+        throw new ApiError(400, "department name, code and password are required");
     }
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -37,7 +37,7 @@ export const createDept = asyncHandler(async (req, res) => {
     }
 
     try {
-        const [department] = await Department.create([{ name: dept_name }], { session });
+        const [department] = await Department.create([{ name: dept_name, code: dept_code }], { session });
         const deptId = department._id;
 
         const studentData = await excelToJson(studentExcel);
@@ -153,37 +153,6 @@ export const createDept = asyncHandler(async (req, res) => {
         const insertedStudents = await Student.insertMany(studentsToInsert, { session });
         const insertedFaculties = await Faculty.insertMany(facultyToInsert, { session });
 
-        const facultySubjectMap = new Map();
-        facultyData.forEach((f) => {
-            const email = f.email?.toLowerCase()?.trim();
-            const user_id = emailToUserId.get(email);
-            if (!user_id) return;
-            if (!facultySubjectMap.has(user_id)) {
-                facultySubjectMap.set(user_id, []);
-            }
-            const subjectId = subjectMap.get(f.subject_code);
-            if (!subjectId) return;
-            facultySubjectMap.get(user_id).push({
-                subjectId: subjectMap.get(f.subject_code),
-                classSection: f.classSection,
-                formType: f.formType || "theory"
-            });
-        });
-        const facultySubjectToInsert = [];
-        insertedFaculties.forEach((f) => {
-            const facultySubject = facultySubjectMap.get(f.user_id.toString());
-            if (!facultySubject) return;
-            facultySubject.forEach((fs) => {
-                facultySubjectToInsert.push({
-                    faculty: f._id,
-                    subject: fs.subjectId,
-                    classSection: fs.classSection,
-                    formType: fs.formType
-                })
-            })
-        })
-        const insertedFacultySubject = await FacultySubject.insertMany(facultySubjectToInsert, { session });
-
         await session.commitTransaction();
         session.endSession();
         return res.status(201).json(
@@ -207,6 +176,100 @@ export const createDept = asyncHandler(async (req, res) => {
         if (subjectExcel?.path) await fs.unlink(subjectExcel.path);
     }
 
+});
+
+export const uploadFacultySubjects = asyncHandler(async (req, res) => {
+    const facultySubjectFile = req.file;
+
+    if (!facultySubjectFile) {
+        throw new ApiError(400, "Excel file is required")
+    }
+
+    const facultySubjectData = await excelToJson(facultySubjectFile);
+    if (facultySubjectData.length === 0) {
+        throw new ApiError(400, "File is empty");
+    }
+
+    const faculties = await Faculty.find().populate("user_id", "email");
+    const subjects = await Subject.find();
+    const departments = await Department.find();
+
+    if (!departments || departments.length === 0) {
+        throw new ApiError(404, "Departments not found");
+    }
+    if (!faculties || faculties.length === 0) {
+        throw new ApiError(404, "Faculties not found");
+    }
+    if (!subjects || subjects.length === 0) {
+        throw new ApiError(404, "Subjects not found");
+    }
+
+    const facultyMap = new Map(
+        faculties.map(f => [f.user_id.email.toLowerCase(), f])
+    );
+
+    const subjectMap = new Map(
+        subjects.map(s => [s.subject_code, s])
+    );
+
+    const departmentMap = new Map(
+        departments.map(d => [d.code, d])
+    );
+    const created = [];
+
+    for (let i = 0; i < facultySubjectData.length; i++) {
+        const {
+            faculty_email,
+            subject_code,
+            department,
+            year,
+            classSection,
+            formType = "theory"
+        } = facultySubjectData[i];
+
+        if (
+            !faculty_email ||
+            !subject_code ||
+            !department ||
+            !year ||
+            !classSection
+        ) {
+            throw new Error("Missing required fields");
+        }
+
+        const faculty = facultyMap.get(faculty_email.toLowerCase());
+        if (!faculty) throw new Error(`Faculty not found: ${faculty_email}`);
+
+        const subject = subjectMap.get(subject_code);
+        if (!subject) throw new Error(`Subject not found: ${subject_code}`);
+
+        const dept = departmentMap.get(department);
+        if (!dept) throw new Error(`Department not found: ${department}`);
+        
+        const fs = await FacultySubject.create({
+            faculty: faculty._id,
+            subject: subject._id,
+            classDepartment: dept._id,
+            classYear: year,
+            classSection,
+            formType
+        });
+
+        created.push(fs._id);
+    }
+
+    if (created.length !== facultySubjectData.length) {
+        throw new ApiError(500, "Failed to upload faculySubjects");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200,
+            {
+                createdCount: created.length,
+            },
+            "FacultySubject upload successfully"
+        )
+    )
 });
 
 export const editDepartment = asyncHandler(async (req, res) => {
@@ -417,7 +480,6 @@ export const addFacultyFile = asyncHandler(async (req, res) => {
 
         const newUsers = [];
         const newFaculties = [];
-        const subject_mapping = [];
         facultyData.forEach((faculty) => {
             if (!existingEmails.has(faculty.email)) {
                 const userId = new mongoose.Types.ObjectId();
@@ -436,14 +498,6 @@ export const addFacultyFile = asyncHandler(async (req, res) => {
                     isHod: faculty.isHod,
                 })
 
-                subject_mapping.push({
-                    faculty: facultyId,
-                    dept: dept_id,
-                    classSection: faculty.classSection,
-                    subject: faculty.subjectName,
-                    formType: faculty.formType,
-                    year: faculty.year
-                })
             }
         });
 
@@ -454,7 +508,6 @@ export const addFacultyFile = asyncHandler(async (req, res) => {
         }
         const createdUser = await User.insertMany(newUsers, { session });
         const createdFaculty = await Faculty.insertMany(newFaculties, { session });
-        const createdMapping = await FacultySubject.insertMany(subject_mapping, { session });
 
         session.commitTransaction();
         session.endSession();
