@@ -4,6 +4,8 @@ import { verifyRole } from "../middlewares/role.middleware.js"
 import {
     createAttendance,
     getClassStudent,
+    updateAttendance,
+    deleteAttendance,
     getFacultyClassByFacultyId,
     getStudentAttendanceByClassSection,
     getStudentAttendanceByFacultyId,
@@ -14,6 +16,8 @@ import {
 const router = Router();
 router.use(verifyJWT);
 router.route('/:faculty_subject').post(verifyRole("faculty"), createAttendance).get(verifyRole("faculty"), getFacultyClassByFacultyId);
+router.route('/:attendance_id').patch(verifyRole("faculty"), updateAttendance);
+router.route('/:attendance_id').delete(verifyRole("faculty"), deleteAttendance);
 router.route('/f').get(verifyRole("faculty"), getClassStudent);
 router.route('/s').get(verifyRole("student"), getStudentAttendanceByStudentId);
 router.route('/s/:subject/:formType').get(verifyRole("student"), getStudentAttendanceBySubject);

@@ -14,7 +14,8 @@ const attendanceSchema = new mongoose.Schema({
         isPresent: {
             type: Boolean,
             required: true
-        }
+        },
+        _id: false
     }],
 }, { timestamps: true })
 

@@ -39,7 +39,7 @@ function AttendanceDashboard() {
             <div className='flex flex-col items-center p-10'>
                 {attendanceRecords.length > 0 &&
                     attendanceRecords.map((attendance) => (
-                        <AttendanceCard key={attendance.facultySubject} attendance={attendance} />
+                        <AttendanceCard key={attendance.facultySubject.toString()} attendance={attendance} />
                     ))
                 }
             </div>
