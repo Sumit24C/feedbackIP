@@ -20,7 +20,7 @@ passport.use(
                 })
 
                 if (existingAccount) {
-                    const user = await User.findById(existingAccount.user);
+                    const user = await User.findById(existingAccount.user_id);
                     return done(null, user);
                 }
 
