@@ -9,7 +9,7 @@ import {
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
 import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject } from './pages/admin'
-import { FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage } from './pages/student'
+import { AttendanceList, FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage, SubjectAttendance } from './pages/student'
 import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyDashboard, FacultyProfilePage, OverallSummary, Questions, QuestionSummary, CreateAttendance, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import NoAccess from './pages/NoAccess'
 function AppRouter() {
@@ -32,6 +32,8 @@ function AppRouter() {
                         <Route path="student" element={<Authorization role="student" />}>
                             <Route path='profile' element={<StudentProfilePage />} />
                             <Route path='dashboard' element={<StudentDashboard />} />
+                            <Route path='attendance' element={<AttendanceList />} />
+                            <Route path='attendance/:id' element={<SubjectAttendance />} />
                             <Route path="forms" element={<FeedbackFormList />} />
                             <Route path="form/:form_id" element={<FeedbackForm />} />
                         </Route>

@@ -38,7 +38,10 @@ function Header() {
       // { path: "/faculty/create-question-template", name: "Add Questions" },
       { path: "/faculty/view-attendance", name: "Attendance" },
     ],
-    student: [{ path: "/student/forms", name: "Feedback Form" }],
+    student: [
+      { path: "/student/forms", name: "Feedback Form" },
+      { path: "/student/attendance", name: "Attendance" }
+    ],
   };
 
   const navLogo = {

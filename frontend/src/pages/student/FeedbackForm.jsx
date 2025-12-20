@@ -3,7 +3,6 @@ import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { useParams, useNavigate } from "react-router-dom";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { Loader2 } from "lucide-react";
-
 function FeedbackForm() {
   const { form_id } = useParams();
   const navigate = useNavigate();
@@ -12,6 +11,7 @@ function FeedbackForm() {
   const [formData, setFormData] = useState(null);
   const [facultySubjectResponse, setFacultySubjectResponse] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
@@ -21,6 +21,7 @@ function FeedbackForm() {
         setFormData(res.data.data);
       } catch (error) {
         alert(extractErrorMsg(error));
+        setErrMsg(extractErrorMsg(error));
       } finally {
         setLoading(false);
       }
@@ -87,6 +88,10 @@ function FeedbackForm() {
     );
   }
 
+  if (errMsg) {
+    return <p className="text-red-500 text-center mt-10">{errMsg}</p>;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-6">
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-4 sm:p-8">
@@ -125,7 +130,7 @@ function FeedbackForm() {
               {formData.questions.map((q, i) => (
                 <div
                   key={q.questionId}
-                  className="bg-white rounded-lg border p-4 space-y-2"
+                  className="bg-white rounded-lg border p-4 space-y-2 flex flex-wrap justify-between items-center"
                 >
                   <p className="text-sm font-medium text-gray-800">
                     {i + 1}. {q.text}
@@ -140,7 +145,7 @@ function FeedbackForm() {
                         Number(e.target.value)
                       )
                     }
-                    className="w-full border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-auto border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="" disabled>
                       Select rating
