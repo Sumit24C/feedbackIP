@@ -47,7 +47,6 @@ export const registerAdmin = asyncHandler(async (req, res) => {
 
 export const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-
     if (!email || !password) {
         throw new ApiError(401, "Invalid input");
     }

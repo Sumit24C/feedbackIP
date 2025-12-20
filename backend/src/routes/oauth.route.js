@@ -5,21 +5,13 @@ import { User } from "../models/user.model.js";
 
 const router = Router();
 
-router.route("/google").get((req, res, next) => {
-    console.log("OAuth START from origin:", req.headers.origin);
-    console.log("Request host:", req.get("host"));
-    next();
-},
+router.route("/google").get(
     passport.authenticate("google", {
-        scope: ["profile", "email"],
-    }));
+        scope: ["profile", "email"]
+    })
+)
 
 router.route("/google/callback").get(
-    (req, res, next) => {
-        console.log("OAuth CALLBACK HIT");
-        console.log("Full URL:", `${req.protocol}://${req.get("host")}${req.originalUrl}`);
-        next();
-    },
     passport.authenticate("google", { session: false, failureRedirect: "/api/auth/google/no-access" }),
     async (req, res) => {
         try {

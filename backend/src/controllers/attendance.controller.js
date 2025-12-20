@@ -35,7 +35,7 @@ export const getClassStudent = asyncHandler(async (req, res) => {
     if (isPracticalClass && year != "FY") {
         const sectionNumber = classSection[1];
         sectionNumber.roll_no = sectionNumber === '1' ?
-            { $le: 36 } : { $ge: 37 } // if A1 check student with roll_no <= 36 else > 36
+            { $le: 36 } : { $ge: 37 } 
     }
 
     const students = await Student.find({
@@ -196,9 +196,26 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
                 localField: "facultySubject",
                 foreignField: "_id",
                 as: "facultySubject",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "subjects",
+                            localField: "subject",
+                            foreignField: "_id",
+                            as: "subject",
+                            pipeline: [{
+                                $project: {
+                                    name: 1,
+                                    _id: 1
+                                }
+                            }]
+                        }
+                    },
+                ]
             }
         },
         { $unwind: "$facultySubject" },
+        { $unwind: "$facultySubject.subject" },
         {
             $lookup: {
                 from: "faculties",
@@ -219,10 +236,7 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
         { $unwind: "$facultyUser" },
         {
             $group: {
-                _id: {
-                    subject: "$facultySubject.subject",
-                    formType: "$facultySubject.formType"
-                },
+                _id: "$facultySubject._id",
                 totalClassess: { $sum: 1 },
                 totalPresent: {
                     $sum: {
@@ -234,7 +248,7 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
                     }
                 },
                 faculty: { $first: "$facultyUser.fullname" },
-                subject: { $first: "$facultySubject.subject" },
+                subject: { $first: "$facultySubject.subject.name" },
                 formType: { $first: "$facultySubject.formType" },
             }
         },
@@ -270,51 +284,94 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
 });
 
 export const getStudentAttendanceBySubject = asyncHandler(async (req, res) => {
-    const student = await Student.findOne({ user_id: req.user?._id })
+    const student = await Student.findOne({ user_id: req.user?._id });
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
 
-    const { subject, formType } = req.params;
-    if (!subject || subject.trim() == "" || !formType || !["practical", "theory"].includes(formType)) {
-        throw new ApiError(401, "Subject and formType are required");
+    const { faculty_subject } = req.params;
+    if (!faculty_subject) {
+        throw new ApiError(400, "FacultySubject id is required");
     }
 
-    const attendance = await Attendance.aggregate([
+    const { cursorDate, limit = 10 } = req.query;
+    const limitNumber = parseInt(limit);
+
+    const matchQuery = {
+        "students.student": student._id,
+        facultySubject: new mongoose.Types.ObjectId(faculty_subject),
+    };
+
+    if (cursorDate && !isNaN(new Date(cursorDate))) {
+        matchQuery.createdAt = { $lt: new Date(cursorDate) };
+    }
+
+    const data = await Attendance.aggregate([
         { $unwind: "$students" },
+        { $match: matchQuery },
+        { $sort: { createdAt: -1 } },
+        { $limit: limitNumber + 1 },
+
+        {
+            $project: {
+                _id: 0,
+                isPresent: "$students.isPresent",
+                date: "$createdAt",
+            },
+        },
+    ]);
+
+    const hasNextPage = data.length > limitNumber;
+    const attendance = hasNextPage ? data.slice(0, limitNumber) : data;
+    const nextCursor = hasNextPage
+        ? attendance[attendance.length - 1].date
+        : null;
+
+    return res.json(
+        new ApiResponse(
+            200,
+            {
+                attendance,
+                nextCursor,
+            },
+            "Successfully fetched attendance"
+        )
+    );
+});
+
+export const getClassByFacultySubject = asyncHandler(async (req, res) => {
+    const { faculty_subject } = req.params;
+    if (!faculty_subject) {
+        throw new ApiError(400, "FacultySubject id is required");
+    }
+
+    const data = await FacultySubject.aggregate([
         {
             $match: {
-                "students.student": student._id
-            }
+                _id: new mongoose.Types.ObjectId(faculty_subject),
+            },
         },
         {
             $lookup: {
-                from: "facultysubjects",
-                localField: "facultySubject",
+                from: "subjects",
+                localField: "subject",
                 foreignField: "_id",
-                as: "facultySubject",
+                as: "subject",
                 pipeline: [
                     {
                         $project: {
-                            subject: 1,
-                            formType: 1,
-                            faculty: 1
-                        }
-                    }
-                ]
-            }
+                            _id: 1,
+                            name: 1,
+                        },
+                    },
+                ],
+            },
         },
-        { $unwind: "$facultySubject" },
-        {
-            $match: {
-                "facultySubject.subject": subject,
-                "facultySubject.formType": formType,
-            }
-        },
+        { $unwind: "$subject" },
         {
             $lookup: {
                 from: "faculties",
-                localField: "facultySubject.faculty",
+                localField: "faculty",
                 foreignField: "_id",
                 as: "faculty",
                 pipeline: [
@@ -324,71 +381,43 @@ export const getStudentAttendanceBySubject = asyncHandler(async (req, res) => {
                             localField: "user_id",
                             foreignField: "_id",
                             as: "user",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        fullname: 1,
-                                        email: 1
-                                    }
-                                }
-                            ]
-                        }
+                        },
                     },
-                    {
-                        $unwind: "$user"
-                    },
+                    { $unwind: "$user" },
                     {
                         $project: {
+                            _id: 1,
                             dept: 1,
                             isHOD: 1,
                             facultyName: "$user.fullname",
                             facultyEmail: "$user.email",
-                        }
-                    }
-                ]
-            }
+                        },
+                    },
+                ],
+            },
         },
         { $unwind: "$faculty" },
         {
             $project: {
-                facultySubject: "$facultySubject.subject",
-                formType: "$facultySubject.formType",
-                faculty: 1,
-                attendance: {
-                    isPresent: "$students.isPresent",
-                    date: "$createdAt"
-                }
-            }
-        },
-        {
-            $group: {
-                _id: "$students.student",
-                facultySubject: { $first: "$facultySubject" },
-                formType: { $first: "$formType" },
-                faculty: { $first: "$faculty" },
-                attendance: {
-                    $push: "$attendance"
-                }
-            }
-        },
-        {
-            $project: {
                 _id: 0,
-                facultySubject: 1,
+                facultySubject: "$_id",
+                subject: "$subject.name",
                 formType: 1,
                 faculty: 1,
-                attendance: 1
-            }
-        }
+            },
+        },
     ]);
 
-
-    if (!Array.isArray(attendance) || attendance.length === 0) {
-        throw new ApiError(500, "Failed to fetch attendance record for given subject");
+    if (!data.length) {
+        throw new ApiError(404, "Class not found");
     }
 
-    return res.status(200).json(
-        new ApiResponse(200, attendance[0], "successsfully attendance record for subject")
+    return res.json(
+        new ApiResponse(
+            200,
+            data[0],
+            "Successfully fetched class details"
+        )
     );
 });
 

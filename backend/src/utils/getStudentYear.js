@@ -8,7 +8,7 @@ export const getStudentYear = (student) => {
     }
     
     let studentYear = "";
-    const diff = currentYear - student.academic_year;
+    const diff = student.academic_year - currentYear;
 
     switch (diff) {
         case 0:

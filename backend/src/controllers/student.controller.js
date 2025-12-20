@@ -56,7 +56,6 @@ export const getFormById = asyncHandler(async (req, res) => {
         );
     };
     const studentYear = getStudentYear(student);
-
     const facultiesSubject = await FacultySubject.aggregate([
         {
             $match: {
