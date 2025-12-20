@@ -35,7 +35,7 @@ export const getClassStudent = asyncHandler(async (req, res) => {
     if (isPracticalClass && year != "FY") {
         const sectionNumber = classSection[1];
         sectionNumber.roll_no = sectionNumber === '1' ?
-            { $le: 36 } : { $ge: 37 } 
+            { $le: 36 } : { $ge: 37 }
     }
 
     const students = await Student.find({
@@ -271,6 +271,9 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
                 totalClassess: 1,
                 totalPercentage: 1,
             }
+        },
+        {
+            $sort: { totalPercentage: -1 }
         }
     ]);
 
@@ -572,7 +575,7 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
         .findById(faculty_subject)
         .populate(
             "subject", "name subject_code"
-        ).select("classSection formType classYear");
+        ).select("classSection formType classYear classDepartment");
 
     if (!facultySubject) {
         throw new ApiError(404, "Faculty not found for this subject");
@@ -581,14 +584,37 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
     const attendanceCount = await Attendance.countDocuments({
         facultySubject: faculty_subject
     });
-    const totalPages = Math.ceil(attendanceCount / limitNumber);
 
+    const totalPages = Math.ceil(attendanceCount / limitNumber);
     if (attendanceCount === 0) {
         const academic_year = getStudentAcademicYear(facultySubject.classYear);
-        const student = await Student.find({
+        const studentClassSection = facultySubject.classSection[0];
+        const studentObj = {
             dept: facultySubject.classDepartment,
-            classSection: facultySubject.classSection,
-            academic_year: academic_year
+            classSection: studentClassSection,
+            academic_year: academic_year,
+        }
+
+        const section = parseInt(facultySubject.classSection[1]);
+        if (facultySubject.formType === "practical") {
+            if (facultySubject.classYear === "FY") {
+                if (section == 1) {
+                    studentObj.roll_no = { $lte: 22 };
+                } else if (section == 2) {
+                    studentObj.roll_no = { $lte: 36 };
+                } else {
+                    studentObj.roll_no = { $gt: 36 };
+                }
+            } else {
+                if (section == 1) {
+                    studentObj.roll_no = { $lte: 36 };
+                } else {
+                    studentObj.roll_no = { $gt: 36 };
+                }
+            }
+        }
+        const student = await Student.find({
+            ...studentObj
         }).populate("user_id", "fullname email").select("roll_no");
 
         const attendance_record = student.map((s) =>
@@ -602,13 +628,13 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
 
         const response = {
             attendance_record,
-            page: pageNumber,
-            totalPages,
-            subject: facultySubject.subject
+            totalPages: 0,
+            currentPage: 1,
+            facultySubject: facultySubject
         }
 
         return res.status(200).json(
-            new ApiResponse(200, { response }, "Students fetched, no attendance yet")
+            new ApiResponse(200, response, "Students fetched, no attendance yet")
         );
     }
 

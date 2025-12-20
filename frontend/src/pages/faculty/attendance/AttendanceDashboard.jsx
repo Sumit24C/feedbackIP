@@ -12,7 +12,7 @@ function AttendanceDashboard() {
     useEffect(() => {
         ; (async () => {
             try {
-                const res = await api.get('/attendance/f/s');
+                const res = await api.get('/attendance/faculty/student');
                 setAttendanceRecords(res.data.data);
             } catch (error) {
                 console.error('viewAttendance :: error :: ', error);

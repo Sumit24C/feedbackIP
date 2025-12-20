@@ -30,11 +30,11 @@ export default function UploadFacultySubject() {
             const form = new FormData();
             form.append("facultysubjects", facultySubjectFile);
 
-            await api.post("/admin/faculty-subjects", form, {
+            const res = await api.post("/admin/faculty-subjects", form, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-
-            toast.success("FacultySubject uploaded successfully");
+            setFacultySubjectFile("");
+            toast.success(res.data.message);
             setFacultySubjectFile(null);
         } catch (error) {
             toast.error(
@@ -84,14 +84,6 @@ export default function UploadFacultySubject() {
                                     setFacultySubjectFile(e.target.files?.[0] || null)
                                 }
                             />
-
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="mt-2"
-                            >
-                                Browse File
-                            </Button>
                         </div>
 
                         <p className="text-xs text-gray-500">

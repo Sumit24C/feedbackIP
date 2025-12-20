@@ -50,7 +50,7 @@ function ClassAttendance() {
     try {
       setLoading(true);
       const res = await api.get(
-        `/attendance/f/s/${id}?page=${page}&limit=${limit}`
+        `/attendance/faculty/student/class/${id}?page=${page}&limit=${limit}`
       );
 
       const {
@@ -59,7 +59,7 @@ function ClassAttendance() {
         currentPage,
         facultySubject: fs,
       } = res.data.data;
-
+  
       setAttendanceRecord(attendance_record);
       setTotalPages(pages);
       setFacultySubject(fs);
@@ -105,9 +105,9 @@ function ClassAttendance() {
 
     try {
       setSubmitLoading(true);
-      await api.post(`/attendance/${id}`, payload);
+      await api.post(`/attendance/faculty/student/${id}`, payload);
 
-      setPage(1);
+      await fetchAttendance(1);
       setIsCreating(false);
       setAttendanceTime("");
     } catch (error) {
@@ -158,7 +158,7 @@ function ClassAttendance() {
     if (!confirm("Delete this attendance session?")) return;
     setDeleteLoading(true);
     try {
-      await api.delete(`/attendance/${sessionId}`);
+      await api.delete(`/attendance/faculty/a/${sessionId}`);
       await fetchAttendance(page);
     } catch (error) {
       alert(extractErrorMsg(error));
@@ -170,7 +170,7 @@ function ClassAttendance() {
   const handleUpdateSession = async () => {
     if (!confirm("Update this attendance session?")) return;
     try {
-      await api.patch(`/attendance/${editableSession._id}`, {
+      await api.patch(`/attendance/faculty/a/${editableSession._id}`, {
         createdAt: editableSession.date,
         attendance: Object.entries(editableSession.students).map(
           ([student, isPresent]) => ({

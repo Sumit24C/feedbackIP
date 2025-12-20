@@ -180,9 +180,8 @@ export const createDept = asyncHandler(async (req, res) => {
 
 export const uploadFacultySubjects = asyncHandler(async (req, res) => {
     const facultySubjectFile = req.file;
-
     if (!facultySubjectFile) {
-        throw new ApiError(400, "Excel file is required")
+        throw new ApiError(400, "Excel file is required");
     }
 
     const facultySubjectData = await excelToJson(facultySubjectFile);
@@ -194,28 +193,18 @@ export const uploadFacultySubjects = asyncHandler(async (req, res) => {
     const subjects = await Subject.find();
     const departments = await Department.find();
 
-    if (!departments || departments.length === 0) {
-        throw new ApiError(404, "Departments not found");
-    }
-    if (!faculties || faculties.length === 0) {
-        throw new ApiError(404, "Faculties not found");
-    }
-    if (!subjects || subjects.length === 0) {
-        throw new ApiError(404, "Subjects not found");
-    }
-
     const facultyMap = new Map(
         faculties.map(f => [f.user_id.email.toLowerCase(), f])
     );
-
     const subjectMap = new Map(
         subjects.map(s => [s.subject_code, s])
     );
-
     const departmentMap = new Map(
         departments.map(d => [d.code, d])
     );
-    const created = [];
+
+    const bulkFile = [];
+    const skippedRows = [];
 
     for (let i = 0; i < facultySubjectData.length; i++) {
         const {
@@ -227,26 +216,21 @@ export const uploadFacultySubjects = asyncHandler(async (req, res) => {
             formType = "theory"
         } = facultySubjectData[i];
 
-        if (
-            !faculty_email ||
-            !subject_code ||
-            !department ||
-            !year ||
-            !classSection
-        ) {
-            throw new Error("Missing required fields");
+        if (!faculty_email || !subject_code || !department || !year || !classSection) {
+            skippedRows.push({ row: i + 1, reason: "Missing required fields" });
+            continue;
         }
 
         const faculty = facultyMap.get(faculty_email.toLowerCase());
-        if (!faculty) throw new Error(`Faculty not found: ${faculty_email}`);
-
         const subject = subjectMap.get(subject_code);
-        if (!subject) throw new Error(`Subject not found: ${subject_code}`);
-
         const dept = departmentMap.get(department);
-        if (!dept) throw new Error(`Department not found: ${department}`);
-        
-        const fs = await FacultySubject.create({
+
+        if (!faculty || !subject || !dept) {
+            skippedRows.push({ row: i + 1, reason: "Invalid faculty/subject/department" });
+            continue;
+        }
+
+        bulkFile.push({
             faculty: faculty._id,
             subject: subject._id,
             classDepartment: dept._id,
@@ -254,22 +238,51 @@ export const uploadFacultySubjects = asyncHandler(async (req, res) => {
             classSection,
             formType
         });
-
-        created.push(fs._id);
     }
 
-    if (created.length !== facultySubjectData.length) {
-        throw new ApiError(500, "Failed to upload faculySubjects");
+    if (bulkFile.length === 0) {
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                {
+                    attempted: 0,
+                    inserted: 0,
+                    skipped: skippedRows.length,
+                    skippedRows
+                },
+                "No valid rows to upload"
+            )
+        );
+    }
+
+    let insertedCount = 0;
+
+    try {
+        const result = await FacultySubject.insertMany(
+            bulkFile,
+            { ordered: false }
+        );
+        insertedCount = result.length;
+    } catch (err) {
+        if (err.code === 11000) {
+            insertedCount = err.insertedDocs?.length || 0;
+        } else {
+            throw err;
+        }
     }
 
     return res.status(200).json(
-        new ApiResponse(200,
+        new ApiResponse(
+            200,
             {
-                createdCount: created.length,
+                attempted: bulkFile.length,
+                inserted: insertedCount,
+                skipped: skippedRows.length,
+                skippedRows
             },
-            "FacultySubject upload successfully"
+            `FacultySubject upload completed, inserted: ${insertedCount}`
         )
-    )
+    );
 });
 
 export const editDepartment = asyncHandler(async (req, res) => {

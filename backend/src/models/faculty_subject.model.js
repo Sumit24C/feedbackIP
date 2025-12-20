@@ -30,6 +30,18 @@ const facultySubjectSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+facultySubjectSchema.index(
+    {
+        faculty: 1,
+        subject: 1,
+        classDepartment: 1,
+        classYear: 1,
+        classSection: 1,
+        formType: 1,
+    },
+    { unique: true }
+);
+
 facultySubjectSchema.plugin(mongooseAggregatePaginate);
 const FacultySubject = mongoose.model("FacultySubject", facultySubjectSchema);
 

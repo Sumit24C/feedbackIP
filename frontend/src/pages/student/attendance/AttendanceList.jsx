@@ -18,7 +18,6 @@ function AttendanceList() {
     const [errMsg, setErrMsg] = useState("");
 
     const api = useAxiosPrivate();
-
     useEffect(() => {
         (async () => {
             try {
@@ -99,7 +98,7 @@ function AttendanceList() {
 
                                     <TableCell>{item.faculty}</TableCell>
 
-                                    <TableCell className="text-center capitalize">
+                                    <TableCell className="text-center">
                                         {item.formType}
                                     </TableCell>
 
