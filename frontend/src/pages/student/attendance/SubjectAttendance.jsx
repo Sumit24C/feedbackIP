@@ -4,7 +4,7 @@ import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { toast } from "sonner";
 import AttendanceList from "./AttendanceList";
-import Attendance from "@/components/Attendance";
+import Attendance from "@/components/attendance/Attendance";
 
 function SubjectAttendancePage() {
   const { id } = useParams();

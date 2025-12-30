@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAxiosPrivate } from '@/hooks/useAxiosPrivate'
-import AttendanceCard from "@/components/AttendanceCard";
+import AttendanceCard from "@/components/attendance/AttendanceCard";
 import { extractErrorMsg } from '@/utils/extractErrorMsg';
 
 function AttendanceDashboard() {

@@ -15,7 +15,7 @@ const facultySubjectSchema = new mongoose.Schema({
     },
     formType: {
         type: String,
-        enum: ["theory", "practical"],
+        enum: ["theory", "practical", "tutorial"],
         default: "theory"
     },
     classDepartment: {

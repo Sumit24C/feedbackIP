@@ -63,11 +63,13 @@ function FeedbackForm() {
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!isComplete) return;
     setSubmitLoading(true);
     try {
       await api.post(`/student/${form_id}`, facultySubjectResponse);
-      alert("✅ Feedback submitted successfully");
+      alert("Feedback submitted successfully");
       navigate("/student/forms");
     } catch {
       alert("Something went wrong while submitting.");
@@ -75,9 +77,6 @@ function FeedbackForm() {
       setSubmitLoading(false);
     }
   };
-
-  const expired =
-    formData?.deadline && new Date(formData.deadline) < new Date();
 
   if (loading) {
     return (
@@ -92,8 +91,18 @@ function FeedbackForm() {
     return <p className="text-red-500 text-center mt-10">{errMsg}</p>;
   }
 
+  const isComplete = facultySubjectResponse.length === formData.facultySubjects.length && facultySubjectResponse.every(fs =>
+    fs.ratings.length === formData.questions.length
+  );
+
+  const expired =
+    formData?.deadline && new Date(formData.deadline) < new Date();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-6">
+    <form
+      onSubmit={handleSubmit}
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-6"
+    >
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-4 sm:p-8">
 
         <div className="text-center mb-6">
@@ -134,7 +143,9 @@ function FeedbackForm() {
                 >
                   <p className="text-sm font-medium text-gray-800">
                     {i + 1}. {q.text}
+                    <span className="ml-1 text-red-500">*</span>
                   </p>
+
 
                   <select
                     defaultValue=""
@@ -145,6 +156,8 @@ function FeedbackForm() {
                         Number(e.target.value)
                       )
                     }
+                    required
+                    aria-required="true"
                     className="w-auto border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="" disabled>
@@ -173,12 +186,14 @@ function FeedbackForm() {
 
         <div className="sticky bottom-0 bg-white border-t mt-8 pt-4 pb-2">
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={submitLoading}
-            className={`w-full py-4 rounded-xl text-lg font-semibold text-white transition
+            className={`w-full py-4 rounded-xl text-lg font-semibold transition
               ${submitLoading
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 active:scale-[0.98]"
+                ? "bg-blue-400 text-white cursor-not-allowed"
+                : !isComplete
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]"
               }
             `}
           >
@@ -186,7 +201,7 @@ function FeedbackForm() {
           </button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 

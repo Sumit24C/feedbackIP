@@ -4,13 +4,12 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/store/authSlice";
 import { extractErrorMsg } from "@/utils/extractErrorMsg.js";
 import { api } from "@/api/api";
-import { User, Mail, LogOut, Settings, Loader2 } from "lucide-react";
+import { User, LogOut, Settings, Loader2 } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuList,
   NavigationMenuItem,
 } from "@/components/ui/navigation-menu";
-import { Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -34,8 +33,6 @@ function Header() {
     faculty: [
       { path: "/faculty/all-forms", name: "All Forms" },
       { path: "/faculty/create-form", name: "Create Form" },
-      // { path: "/faculty/questions", name: "Questions" },
-      // { path: "/faculty/create-question-template", name: "Add Questions" },
       { path: "/faculty/view-attendance", name: "Attendance" },
     ],
     student: [
@@ -70,7 +67,7 @@ function Header() {
       className="
         w-full fixed top-0 left-0 z-50
         bg-white/85 backdrop-blur-lg
-        shadow-[0_8px_24px_rgba(30,64,175,0.12)]
+        shadow-2xs
         border-b border-blue-200/50
         px-6 py-3 flex items-center justify-between
         transition-colors duration-300

@@ -6,8 +6,8 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
-import { getStudentYear } from "../utils/getStudentYear.js"
 import { Subject } from "../models/subject.model.js"
+import { getClassSection, getStudentYear } from "../utils/student.utils.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id } = req.params;
@@ -23,27 +23,15 @@ export const getFormById = asyncHandler(async (req, res) => {
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
-    if (student.dept.toString() !== form.dept.toString()) {
-        throw new ApiError(403, "Student doesn't belong to the department");
+
+    if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept)) {
+        return res.status(200).json(
+            new ApiResponse(200, {}, "Not your department")
+        );
     }
 
-    let studentClassSection = student.classSection;
-    if (student.year != "FY") {
-        if (form.formType === "practical") {
-            studentClassSection = student.roll_no <= 36 ? `${studentClassSection}1` : `${studentClassSection}2`;
-        }
-    } else {
-        if (form.formType === "practical") {
-            if (student.roll_no <= 22) {
-                studentClassSection = `${studentClassSection}1`;
-            } else if (student.roll_no <= 36) {
-                studentClassSection = `${studentClassSection}2`;
-            } else {
-                studentClassSection = `${studentClassSection}3`;
-            }
-        }
-    }
-
+    const studentClassSection = getClassSection(student, form.formType);
+    const studentYear = getStudentYear(student);
     const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });
     if (existingResponse) {
         throw new ApiError(409, "Response already submitted");
@@ -55,75 +43,101 @@ export const getFormById = asyncHandler(async (req, res) => {
             new ApiResponse(200, {}, "Form is expired")
         );
     };
-    const studentYear = getStudentYear(student);
-    const facultiesSubject = await FacultySubject.aggregate([
-        {
-            $match: {
-                classDepartment: student.dept,
-                classSection: studentClassSection.trim(),
-                formType: form.formType,
-                classYear: studentYear,
-            }
-        },
-        {
-            $lookup: {
-                from: "subjects",
-                localField: "subject",
-                foreignField: "_id",
-                as: "subject",
-                pipeline: [
-                    {
-                        $project: {
-                            dept: 1,
-                            name: 1,
-                            subject_code: 1,
-                            type: 1,
-                        }
-                    }
-                ]
-            }
-        },
-        { $unwind: "$subject" },
-        {
-            $lookup: {
-                from: "faculties",
-                localField: "faculty",
-                foreignField: "_id",
-                as: "facultyData",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "user_id",
-                            foreignField: "_id",
-                            as: "user",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        email: 1,
-                                        fullname: 1
-                                    }
-                                },
-                            ]
-                        }
-                    }
-                ]
-            }
-        },
-        { $unwind: "$facultyData" },
-        { $unwind: "$facultyData.user" },
-        {
-            $project: {
-                facultyId: "$facultyData._id",
-                facultyName: "$facultyData.user.fullname",
-                subject: 1,
-                classYear: 1,
-                classSection: 1,
-            }
-        }
-    ]);
 
-    if (!facultiesSubject || facultiesSubject.length === 0) {
+    let facultySubjects = [];
+    if (form.targetType === "DEPARTMENT") {
+        facultySubjects = await FacultySubject.aggregate([
+            {
+                $match: {
+                    classDepartment: student.dept,
+                    classSection: studentClassSection.trim(),
+                    formType: form.formType,
+                    classYear: studentYear,
+                }
+            },
+            {
+                $lookup: {
+                    from: "subjects",
+                    localField: "subject",
+                    foreignField: "_id",
+                    as: "subject",
+                    pipeline: [
+                        {
+                            $project: {
+                                dept: 1,
+                                name: 1,
+                                subject_code: 1,
+                                type: 1,
+                            }
+                        }
+                    ]
+                }
+            },
+            { $unwind: "$subject" },
+            {
+                $lookup: {
+                    from: "faculties",
+                    localField: "faculty",
+                    foreignField: "_id",
+                    as: "facultyData",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "user_id",
+                                foreignField: "_id",
+                                as: "user",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            email: 1,
+                                            fullname: 1
+                                        }
+                                    },
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            { $unwind: "$facultyData" },
+            { $unwind: "$facultyData.user" },
+            {
+                $project: {
+                    facultyId: "$facultyData._id",
+                    facultyName: "$facultyData.user.fullname",
+                    subject: 1,
+                    classYear: 1,
+                    classSection: 1,
+                }
+            }
+        ]);
+    } else {
+        const facultySubjectId = form.facultySubject[0]
+        const fs = await FacultySubject.findById(facultySubjectId)
+            .populate({
+                path: "faculty",
+                select: "_id user_id",
+                populate: {
+                    path: "user_id",
+                    select: "fullname"
+                }
+            })
+            .populate("subject")
+            .select("subject classSection classYear faculty")
+            .lean();
+
+        facultySubjects = [{
+            _id: facultySubjectId,
+            facultyId: fs.faculty?._id,
+            facultyName: fs.faculty?.user_id?.fullname,
+            subject: fs.subject,
+            classYear: fs.classYear,
+            classSection: fs.classSection
+        }];
+    }
+
+    if (!facultySubjects || facultySubjects.length === 0) {
         throw new ApiError(500, "No faculty subjects found for this form");
     }
 
@@ -138,7 +152,7 @@ export const getFormById = asyncHandler(async (req, res) => {
             text: q.questionText,
             type: q.questionType
         })),
-        facultySubjects: facultiesSubject
+        facultySubjects: facultySubjects,
     };
 
     return res.status(200).json(
@@ -153,7 +167,30 @@ export const getForms = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Student not found");
     }
 
-    const forms = await Form.find({ dept: student.dept }).lean();
+    const baseSection = getClassSection(student);
+    const studentYear = getStudentYear(student);
+
+    const facultySubjects = await FacultySubject.find({
+        classSection: { $in: [baseSection, student.classSection] },
+        classDepartment: student.dept,
+        classYear: studentYear
+    }).select("_id");
+
+    const facultySubjectIds = facultySubjects.map((fs) => fs._id);
+
+    const forms = await Form.find({
+        $or: [
+            {
+                targetType: "CLASS",
+                facultySubject: { $in: facultySubjectIds }
+            },
+            {
+                targetType: "DEPARTMENT",
+                dept: student.dept
+            }
+        ]
+    }).lean();
+
     if (forms.length === 0) {
         throw new ApiError(404, "Forms not found");
     }
@@ -192,8 +229,10 @@ export const submitResponse = asyncHandler(async (req, res) => {
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
-    if (student.dept.toString() !== form.dept.toString()) {
-        throw new ApiError(403, "Student doesn't belong to the department");
+    if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept)) {
+        return res.status(200).json(
+            new ApiResponse(200, {}, "Not your department")
+        );
     }
 
     const existingResponse = await Response.findOne({ student: student._id, form: form._id });

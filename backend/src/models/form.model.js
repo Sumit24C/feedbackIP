@@ -12,10 +12,19 @@ const formSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
-    dept: {
+    targetType: {
+        type: String,
+        enum: ["CLASS", "DEPARTMENT", "GLOBAL"],
+        required: true
+    },
+    facultySubject: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "FacultySubject",
+    }],
+    dept: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Department"
-    },
+    }],
     deadline: {
         type: Date,
         required: true
@@ -33,13 +42,14 @@ const formSchema = new mongoose.Schema({
     },
     questions: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Question"
+        ref: "Question",
+        required: true
     }],
     formType: {
         type: String,
-        enum: ["practical", "theory", "infrastructure", "subject"],
+        enum: ["practical", "theory", "tutorial", "infrastructure",],
+        required: true
     }
-    
 }, { timestamps: true });
 
 formSchema.pre("findOneAndDelete", async function (next) {

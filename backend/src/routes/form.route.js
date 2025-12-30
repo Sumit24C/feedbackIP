@@ -4,6 +4,7 @@ import { verifyRole } from "../middlewares/role.middleware.js"
 import {
     createForm,
     deleteForm,
+    getFacultyClassess,
     getFormById,
     getFormsByDept,
     updateForm
@@ -12,5 +13,5 @@ const router = Router();
 router.use(verifyJWT, verifyRole("admin", "faculty"));
 router.route("/").post(createForm).get(getFormsByDept);
 router.route("/:form_id").put(updateForm).delete(deleteForm).get(getFormById);
-
+router.route("/faculty/class").get(getFacultyClassess);
 export default router;
