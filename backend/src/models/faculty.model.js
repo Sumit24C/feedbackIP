@@ -14,7 +14,7 @@ const facultySchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-}, { timestamps: true })
+}, { timestamps: true });
 
 facultySchema.pre("deleteOne", {
     document: true, query: false

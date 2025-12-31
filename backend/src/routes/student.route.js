@@ -5,5 +5,6 @@ const router = Router();
 router.use(verifyJWT);
 router.route("/").get(getForms);
 router.route("/:form_id").get(getFormById).post(submitResponse);
+router.route("/:form_id/:fs_id").get(getFormById).post(submitResponse);
 
 export default router;

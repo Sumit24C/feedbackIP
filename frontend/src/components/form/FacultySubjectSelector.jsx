@@ -2,25 +2,29 @@ import { useCallback, useEffect, useState } from "react";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSelector } from "react-redux";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses, targetType, setTargetType }) {
     const axiosPrivate = useAxiosPrivate();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState([]);
     const [years, setYears] = useState([]);
+    const { userData } = useSelector((state) => state.auth);
 
     useEffect(() => {
         (async () => {
             try {
-                const res = await axiosPrivate.get(`/form/faculty/class`);
-                const classes = res.data.data;
-
-                setData(classes);
-
-                setYears([...new Set(classes.map(c => c.classYear))]);
+                const url = userData?.role === "admin" ? "/form/admin/dept" : "/form/faculty/class"
+                const res = await axiosPrivate.get(url);
+                if (userData?.role === "faculty") {
+                    const classes = res.data.data;
+                    setYears([...new Set(classes.map(c => c.classYear))]);
+                }
+                setData(res.data.data);
             } catch (error) {
                 toast.error(
-                    error?.response?.data?.message || "Failed to fetch classes"
+                    extractErrorMsg(error) || "Failed to fetch data"
                 );
             } finally {
                 setLoading(false);
@@ -28,24 +32,15 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
         })();
     }, []);
 
-    const toggleSelection = (id) => {
-        setSelectedClasses((prev) =>
-            prev.includes(id)
-                ? prev.filter((p) => p !== id)
-                : [...prev, id]
-        );
-    };
+    const filteredData = useMemo(
+        () => data.filter((d) => d.formType === formType),
+        [data, formType]
+    );
 
-    const selectAll = () => {
-        setSelectedClasses(data.map((d) => d._id));
-    };
-
-    const clearAll = () => {
-        setSelectedClasses([]);
-    };
+    const tabs = userData?.role === "faculty" ? ["CLASS", "DEPARTMENT"] : ["DEPARTMENT", "INSTITUTE"];
 
     const toggleYearSelection = (year) => {
-        const yearIds = data
+        const yearIds = filteredData
             .filter((d) => d.classYear === year)
             .map((d) => d._id);
 
@@ -58,14 +53,32 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
         );
     };
 
-    const filteredData = data.filter((d) => d.formType === formType);
+    const selectAll = () => {
+        setSelectedClasses(filteredData.map((d) => d._id));
+    };
+
+    const toggleSelection = (id) => {
+        setSelectedClasses((prev) =>
+            prev.includes(id)
+                ? prev.filter((p) => p !== id)
+                : [...prev, id]
+        );
+    };
+
+    const clearAll = () => {
+        setSelectedClasses([]);
+    };
+
+    useEffect(() => {
+        clearAll();
+    }, [formType])
 
     return (
         <div className="w-full">
             <div className="bg-white rounded-2xl shadow-md p-4 sticky top-20 space-y-4">
 
                 <div className="flex rounded-xl border bg-gray-50 p-1">
-                    {["CLASS", "DEPARTMENT"].map((t) => (
+                    {tabs.map((t) => (
                         <button
                             key={t}
                             onClick={() => setTargetType(t)}
@@ -87,7 +100,7 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
                             <p className="text-sm font-medium text-gray-800">
                                 Assign Classes
                             </p>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            <span className="text-xs px-2 py-0.5 rounded-ful text-blue-700">
                                 {selectedClasses.length} selected
                             </span>
                         </div>
@@ -134,10 +147,10 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
                                                 key={item._id}
                                                 onClick={() => toggleSelection(item._id)}
                                                 className={`flex gap-3 px-3 py-2 rounded-lg border cursor-pointer transition
-                        ${isChecked
+                                                    ${isChecked
                                                         ? "bg-blue-50 border-blue-300"
                                                         : "bg-white hover:bg-gray-50 border-gray-200"}
-                      `}
+                                                `}
                                             >
                                                 <Checkbox checked={isChecked} className="mt-1" />
 
@@ -160,6 +173,72 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
                                 ) : (
                                     <p className="text-sm text-gray-500 text-center py-10">
                                         No classes found
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {userData?.role === "admin" && targetType === "DEPARTMENT" && (
+                    <div className="space-y-4">
+
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-800">
+                                Assign Department
+                            </p>
+                            <span className="text-xs px-2 py-0.5 rounded-ful text-blue-700">
+                                {selectedClasses.length} selected
+                            </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={selectAll}
+                                className="text-xs px-3 py-1 rounded-full border bg-white hover:bg-gray-50 transition"
+                            >
+                                Select all
+                            </button>
+                            <button
+                                onClick={clearAll}
+                                className="text-xs px-3 py-1 rounded-full border bg-white hover:bg-gray-50 transition"
+                            >
+                                Clear
+                            </button>
+                        </div>
+
+                        {loading ? (
+                            <div className="flex justify-center py-8">
+                                <div className="w-6 h-6 border-2 border-transparent border-t-blue-500 border-l-blue-400 rounded-full animate-spin" />
+                            </div>
+                        ) : (
+                            <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                                {data.length > 0 ? (
+                                    data.map((item) => {
+                                        const isChecked = selectedClasses.includes(item._id);
+
+                                        return (
+                                            <div
+                                                key={item._id}
+                                                onClick={() => toggleSelection(item._id)}
+                                                className={`flex gap-3 px-3 py-2 rounded-lg border cursor-pointer transition
+                                                    ${isChecked
+                                                        ? "bg-blue-50 border-blue-300"
+                                                        : "bg-white hover:bg-gray-50 border-gray-200"}
+                                                `}
+                                            >
+                                                <Checkbox checked={isChecked} className="mt-1" />
+                                                <div className="flex items-start justify-center gap-2">
+                                                    <p className="font-medium text-sm text-gray-800">
+                                                        {item.name}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p className="text-sm text-gray-500 text-center py-10">
+                                        No department found
                                     </p>
                                 )}
                             </div>

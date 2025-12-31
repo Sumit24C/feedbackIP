@@ -45,7 +45,7 @@ export const getStudentAcademicYear = (year) => {
     return studentYear;
 }
 
-export const getStudentYear = (student) => {
+export const getStudentYear = (studentAcademicYear) => {
     const today = new Date();
     let currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
@@ -53,9 +53,9 @@ export const getStudentYear = (student) => {
     if (currentMonth >= 6) {
         currentYear++;
     }
-
+    
     let studentYear = "";
-    const diff = student.academic_year - currentYear;
+    const diff = studentAcademicYear - currentYear;
 
     switch (diff) {
         case 0:

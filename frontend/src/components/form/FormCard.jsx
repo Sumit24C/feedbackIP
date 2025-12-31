@@ -15,13 +15,13 @@ function FormCard({ form, handleDelete }) {
 
     return (
         <div
-            className={`border p-4 rounded-2xl shadow-md hover:shadow-md transition relative 
+            className={`border-2 p-4 rounded-2xl shadow-md hover:shadow-md transition relative border-black
                 ${isExpired ?
                     "border-red-500 bg-red-50"
                     : "border-gray-300"
                 } 
                 ${userData._id === form.createdBy ?
-                    "bg-blue-200" : "bg-white"}`}
+                    "bg-blue-100" : "bg-white"}`}
         >
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -32,7 +32,7 @@ function FormCard({ form, handleDelete }) {
 
                 <DropdownMenuContent align="end" className="w-32">
                     <DropdownMenuItem
-                        onClick={() => navigate(`/faculty/dashboard/${form._id}`)}
+                        onClick={() => navigate(`/faculty/feedback/${form._id}`)}
                     >
                         View
                     </DropdownMenuItem>
@@ -75,14 +75,23 @@ function FormCard({ form, handleDelete }) {
                     </span>
                 </div>
 
-                <p
-                    className={`text-sm ${isExpired ? "text-red-600" : "text-gray-600"
-                        }`}
-                >
-                    Deadline:{" "}
-                    <strong>{new Date(form.deadline).toLocaleDateString()}</strong>
-                    {isExpired && " (Expired)"}
-                </p>
+                <div className='flex flex-wrap justify-start gap-2'>
+                    <p
+                        className={`text-sm ${isExpired ? "text-red-600" : "text-gray-600"
+                            }`}
+                    >
+                        StartDate:{" "}
+                        <strong>{new Date(form.startDate).toLocaleDateString()}</strong>
+                    </p>
+                    <p
+                        className={`text-sm ${isExpired ? "text-red-600" : "text-gray-600"
+                            }`}
+                    >
+                        Deadline:{" "}
+                        <strong>{new Date(form.deadline).toLocaleDateString()}</strong>
+                        {isExpired && " (Expired)"}
+                    </p>
+                </div>
 
                 <p className="text-sm text-gray-700">
                     Total Responses: <strong>{form.responseCount}</strong>

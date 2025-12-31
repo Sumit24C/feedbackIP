@@ -602,7 +602,6 @@ export const addSubjectFile = asyncHandler(async (req, res) => {
     );
 });
 
-
 export const getDepartmentById = asyncHandler(async (req, res) => {
 
     const { dept_id } = req.params;

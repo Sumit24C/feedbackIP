@@ -48,7 +48,8 @@ function AllForms() {
 
   const filteredForms = forms.filter((form) => {
     if (filter === "self") return form.createdBy === userData._id;
-    if (filter === "department") return form.createdBy !== userData._id;
+    if (filter === "department") return form.targetType == "DEPARTMENT";
+    if (filter === "class") return form.targetType == "CLASS";
     return true;
   });
 
@@ -72,6 +73,7 @@ function AllForms() {
             <SelectContent>
               <SelectItem value="all">All Forms</SelectItem>
               <SelectItem value="self">Created by Me</SelectItem>
+              <SelectItem value="class">Class Forms</SelectItem>
               <SelectItem value="department">Department Forms</SelectItem>
             </SelectContent>
           </Select>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -13,296 +14,339 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useSelector } from "react-redux";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
-function FormContainer({ formType, setFormType, selectedClasses, setSelectedClasses, targetType, setTargetType }) {
+function FormContainer({
+    formType,
+    setFormType,
+    selectedClasses,
+    setSelectedClasses,
+    targetType,
+    setTargetType,
+}) {
     const { form_id } = useParams();
-    const axiosPrivate = useAxiosPrivate();
     const navigate = useNavigate();
+    const axiosPrivate = useAxiosPrivate();
     const { userData } = useSelector((state) => state.auth);
-    const [title, setTitle] = useState("");
-    const [deadline, setDeadline] = useState("");
-    const [ratingMin, setRatingMin] = useState(1);
-    const [ratingMax, setRatingMax] = useState(5);
+
     const [questions, setQuestions] = useState([]);
     const [newQuestion, setNewQuestion] = useState("");
     const [loadingForm, setLoadingForm] = useState(false);
-    const [submitLoading, setSubmitLoading] = useState(false);
+    const [submitAction, setSubmitAction] = useState("create");
+
     const today = new Date().toISOString().split("T")[0];
+    const {
+        register,
+        handleSubmit,
+        reset,
+        watch,
+        formState: { errors, isSubmitting },
+    } = useForm({
+        defaultValues: {
+            title: "",
+            deadline: "",
+            startDate: new Date().toISOString().split("T")[0],
+            ratingMin: 1,
+            ratingMax: 5,
+        },
+    });
+
     useEffect(() => {
         if (!form_id) return;
 
-        const fetchForm = async () => {
+        (async () => {
             setLoadingForm(true);
             try {
                 const res = await axiosPrivate.get(`/form/${form_id}`);
                 const form = res.data.data;
-                
-                setTitle(form.title);
-                setFormType(form.formType);
-                setDeadline(form.deadline?.split("T")[0]);
-                setRatingMin(form.ratingConfig?.min ?? 1);
-                setRatingMax(form.ratingConfig?.max ?? 5);
-                setSelectedClasses(form.facultySubjects);
-                setTargetType(form.targetType);
-                const formattedQuestions = form.questions.map((q) => ({
-                    questionText: q.questionText,
-                    questionId: q._id,
-                }));
 
-                setQuestions(formattedQuestions);
-            } catch {
-                toast.error("Failed to load form details");
+                reset({
+                    title: form.title,
+                    deadline: form.deadline.split("T")[0],
+                    startDate: form.startDate.split("T")[0],
+                    ratingMin: form.ratingConfig.min,
+                    ratingMax: form.ratingConfig.max,
+                });
+
+                setFormType(form.formType);
+                setTargetType(form.targetType);
+                setSelectedClasses(form.facultySubject);
+
+                setQuestions(
+                    form.questions.map((q) => ({
+                        _id: q._id,
+                        questionText: q.questionText,
+                    }))
+                );
+            } catch (error) {
+                toast.error(extractErrorMsg(error) || "Failed to load form");
             } finally {
                 setLoadingForm(false);
             }
-        };
+        })();
 
-        fetchForm();
-    }, [form_id]);
+    }, [form_id, reset]);
 
-    const handleAddQuestion = () => {
+    const addQuestion = () => {
         if (!newQuestion.trim()) {
             return toast.error("Question cannot be empty");
         }
-        setQuestions([...questions, { questionText: newQuestion }]);
+        setQuestions((prev) => [...prev, { questionText: newQuestion.trim() }]);
         setNewQuestion("");
     };
 
     const removeQuestion = (index) => {
-        setQuestions(questions.filter((_, i) => i !== index));
+        setQuestions((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const handleSubmit = async () => {
-        if (!title || !formType || !deadline || questions.length === 0 || !targetType) {
-            return toast.error("Please fill all fields & add at least 1 question");
+    const onSubmit = async (data, action) => {
+        if (!targetType) {
+            return toast.error("Target type is required");
         }
 
-        if (ratingMax <= ratingMin) {
+        if (!selectedClasses.length && targetType === "CLASS") {
+            return toast.error("Select at least one class");
+        }
+        const start = new Date(data.startDate);
+        const end = new Date(data.deadline);
+        if (end < start) {
+            return toast.error("Deadline must be after the start date");
+        }
+
+        if (data.ratingMax <= data.ratingMin) {
             return toast.error("Rating max must be greater than min");
         }
 
-        if (!(ratingMin >= 1 && ratingMin < 10)) {
-            return toast.error("Enter a valid min rating");
+        if (questions.length === 0) {
+            return toast.error("Atleast one question is required");
         }
 
-        if (!(ratingMax >= 2 && ratingMax <= 10)) {
-            return toast.error("Enter a valid max rating");
+        const payload = {
+            title: data.title,
+            formType: formType,
+            deadline: data.deadline,
+            startDate: data.startDate,
+            ratingConfig: {
+                min: data.ratingMin,
+                max: data.ratingMax,
+            },
+            targetType,
+            existingQuestionIds: questions
+                .filter((q) => q._id)
+                .map((q) => q._id),
+
+            questions: questions
+                .filter((q) => !q._id)
+                .map((q) => q.questionText),
+        };
+
+        if (targetType === "DEPARTMENT") {
+            payload.dept = [userData?.dept];
+        } else if (targetType === "CLASS") {
+            payload.facultySubject = selectedClasses;
         }
-
-        if (!selectedClasses || selectedClasses.length === 0) {
-            return toast.error("Select atleast 1 class");
-        }
-
-        setSubmitLoading(true);
-
-        const customQuestions = questions
-            .filter((q) => !q.questionId)
-            .map((q) => ({ questionText: q.questionText }));
-
-        const existingQuestionIds = questions
-            .filter((q) => q.questionId)
-            .map((q) => q.questionId);
 
         try {
-            const payload = {
-                title,
-                formType,
-                deadline,
-                questions: customQuestions,
-                questionsId: existingQuestionIds,
-                ratingConfig: {
-                    min: ratingMin,
-                    max: ratingMax,
-                },
-                facultySubject: selectedClasses,
-                targetType: targetType
-            };
-
-            if (form_id) {
+            if (form_id && action === "update") {
                 await axiosPrivate.put(`/form/${form_id}`, payload);
                 toast.success("Form updated successfully");
             } else {
-                
-                await axiosPrivate.post(`/form`, payload);
+                await axiosPrivate.post("/form", payload);
                 toast.success("Form created successfully");
             }
-
-            navigate("/faculty/all-forms");
-        } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to save form");
-        } finally {
-            setSubmitLoading(false);
+            navigate(`/${userData?.role}/all-forms`);
+        } catch (err) {
+            toast.error(extractErrorMsg(err) || "Failed to save form");
         }
     };
 
+    const startDateValue = watch("startDate");
+    const maxRating = watch("ratingMax");
+    const minRating = watch("ratingMin");
+
     if (loadingForm) {
-        return <div className="p-6 text-center">Loading form...</div>;
+        return (
+            <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-transparent border-t-blue-500 border-l-blue-400 rounded-full animate-spin" />
+            </div>
+        )
     }
 
     return (
-        <div className="w-full grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-4 justify-around">
-            <div className="flex-1 space-y-5">
-                <div className="bg-white rounded-2xl shadow-lg p-5 space-y-5">
-                    <p className="text-sm text-gray-500 text-center">
-                        Fill the form details and add questions
-                    </p>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-4">
+            <form
+                className="bg-white rounded-2xl shadow-lg p-5 space-y-5"
+                onSubmit={handleSubmit((data) => onSubmit(data, submitAction))}
+            >
+                <div>
+                    <label className="text-sm font-medium">Form Title</label>
+                    <input
+                        {...register("title", { required: "Title is required" })}
+                        className="w-full border rounded-lg px-3 py-2 mt-1"
+                    />
+                    {errors.title && (
+                        <p className="text-xs text-red-500">{errors.title.message}</p>
+                    )}
+                </div>
 
-                    <div>
-                        <label className="text-sm font-medium">Form Title</label>
+                <div>
+                    <label className="text-sm font-medium">Form Type</label>
+                    <Select value={formType} onValueChange={setFormType}>
+                        <SelectTrigger className="w-full mt-1">
+                            <SelectValue placeholder="Select form type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <SelectLabel>Form Type</SelectLabel>
+                                <SelectItem value="theory">Theory</SelectItem>
+                                <SelectItem value="practical">Practical</SelectItem>
+                                {userData?.role === "admin" && (
+                                    <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                                )}
+                                <SelectItem value="tutorial">Tutorial</SelectItem>
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">
+                            Start Date
+                        </label>
                         <input
-                            type="text"
-                            className="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
+                            type="date"
+                            min={today}
+                            {...register("startDate", { required: true })}
+                            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        {errors.startDate && (
+                            <p className="text-xs text-red-500">{errors.startDate.message}</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">
+                            Deadline
+                        </label>
+                        <input
+                            type="date"
+                            min={startDateValue || today}
+                            {...register("deadline", {
+                                required: true,
+                                validate: (value) =>
+                                    !startDateValue || value >= startDateValue
+                                        ? true
+                                        : "Deadline cannot be before start date",
+                            })}
+                            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        {errors.deadline && (
+                            <p className="text-xs text-red-500">{errors.deadline.message}</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">Min Rating</label>
+                        <input
+                            type="number"
+                            {...register("ratingMin", { valueAsNumber: true })}
+                            min={1}
+                            max={(maxRating ?? 10) - 1}
+                            className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-sm font-medium">Form Type</label>
-                            <Select value={formType} onValueChange={setFormType}>
-                                <SelectTrigger className="w-full mt-1">
-                                    <SelectValue placeholder="Select form type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>Form Type</SelectLabel>
-                                        <SelectItem value="theory">Theory</SelectItem>
-                                        <SelectItem value="practical">Practical</SelectItem>
-                                        {userData.role === "admin" && (
-                                            <SelectItem value="infrastructure">Infrastructure</SelectItem>
-                                        )}
-                                        <SelectItem value="tutorial">Tutorial</SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-medium">Deadline</label>
-                            <input
-                                type="date"
-                                className="w-full border rounded-lg px-3 py-2 mt-1"
-                                value={deadline}
-                                onChange={(e) => setDeadline(e.target.value)}
-                                min={today}
-                            />
-                        </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">Max Rating</label>
+                        <input
+                            type="number"
+                            {...register("ratingMax", { valueAsNumber: true })}
+                            min={(minRating ?? 1) + 1}
+                            max={10}
+                            className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
                     </div>
+                </div>
 
-                    <div>
-                        <h2 className="font-medium mb-2">Rating Scale</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm">Min</label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={9}
-                                    className="w-full border rounded-lg px-3 py-2 mt-1"
-                                    value={ratingMin}
-                                    onChange={(e) => setRatingMin(Number(e.target.value))}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm">Max</label>
-                                <input
-                                    type="number"
-                                    min={2}
-                                    max={10}
-                                    className="w-full border rounded-lg px-3 py-2 mt-1"
-                                    value={ratingMax}
-                                    onChange={(e) => setRatingMax(Number(e.target.value))}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border rounded-xl p-4 space-y-2">
-                        <label className="text-sm font-medium">Add Question</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                className="flex-1 border rounded-lg px-3 py-2"
-                                placeholder="e.g. How was the teaching quality?"
-                                value={newQuestion}
-                                onChange={(e) => setNewQuestion(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        handleAddQuestion();
+                <div className="border rounded-xl p-4">
+                    <label className="text-sm font-medium">Add Question</label>
+                    <div className="flex gap-2 mt-1">
+                        <input
+                            value={newQuestion}
+                            onChange={(e) => setNewQuestion(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    if (!newQuestion.trim()) {
+                                        return toast.error("Empty question cannot be added");
                                     }
-                                }}
-                            />
-                            <button
-                                onClick={handleAddQuestion}
-                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3"
-                            >
-                                <Plus size={18} />
-                            </button>
-                        </div>
-                    </div>
+                                    addQuestion();
+                                }
+                            }}
+                            className="flex-1 border rounded-lg px-3 py-2"
+                        />
 
+                        <button
+                            type="button"
+                            onClick={addQuestion}
+                            className="bg-blue-600 text-white rounded-lg px-3"
+                        >
+                            <Plus size={18} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex gap-3">
                     <button
-                        onClick={handleSubmit}
-                        disabled={submitLoading}
-                        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium flex justify-center items-center gap-2"
+                        type="submit"
+                        disabled={isSubmitting}
+                        onClick={() => setSubmitAction("create")}
+                        className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold"
                     >
-                        {submitLoading ? (
-                            <>
-                                <Loader2 className="animate-spin" size={18} />
-                                {form_id ? "Updating..." : "Creating..."}
-                            </>
-                        ) : (
-                            form_id ? "Update Form" : "Create Form"
-                        )}
+                        {isSubmitting ? (
+                            <Loader2 className="animate-spin mx-auto" />
+                        ) : form_id ? "Recreate Form" : "Create Form"}
                     </button>
+
+                    {form_id && (
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            onClick={() => setSubmitAction("update")}
+                            className="flex-1 py-3 rounded-xl border border-blue-600 text-blue-600 font-semibold"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="animate-spin mx-auto" />
+                            ) : (
+                                "Update Form"
+                            )}
+                        </button>
+                    )}
                 </div>
-            </div>
-            <div className="scroll-py-0">
-                <div className="bg-white rounded-2xl shadow-lg p-4 space-y-3 sticky top-20 h-[520px] flex flex-col">
-                    <div className="flex items-center justify-between">
-                        <h2 className="font-semibold text-gray-800">
-                            Questions
-                        </h2>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                            {questions.length}
-                        </span>
+            </form>
+
+            <div className="bg-white rounded-2xl shadow-lg p-4 h-[520px] overflow-y-auto">
+                <p className="text-gray-600 p-2">Questions List</p>
+                {questions.map((q, i) => (
+                    <div
+                        key={i}
+                        className="flex justify-between items-center border rounded-lg px-3 py-2 mb-2"
+                    >
+                        <p className="text-sm">{i + 1}. {q.questionText}</p>
+                        <button
+                            onClick={() => removeQuestion(i)}
+                            className="text-red-500"
+                        >
+                            <Trash2 size={14} />
+                        </button>
                     </div>
-
-                    <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                        {questions.length === 0 ? (
-                            <p className="text-sm text-gray-500 text-center mt-10">
-                                No questions added yet
-                            </p>
-                        ) : (
-                            questions.map((q, i) => (
-                                <div
-                                    key={i}
-                                    className="flex justify-between items-start gap-2 border rounded-lg px-3 py-2 hover:bg-gray-50 transition"
-                                >
-                                    <p className="text-sm text-gray-800">
-                                        <span className="font-medium mr-1">
-                                            {i + 1}.
-                                        </span>
-                                        {q.questionText}
-                                    </p>
-
-                                    <button
-                                        onClick={() => removeQuestion(i)}
-                                        className="text-red-500 hover:text-red-600 shrink-0"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                ))}
             </div>
-
         </div>
-    )
+    );
 }
 
-export default FormContainer
+export default FormContainer;

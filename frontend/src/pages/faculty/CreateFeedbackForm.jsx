@@ -1,11 +1,12 @@
 import { useState } from "react";
 import FacultySubjectSelector from "@/components/form/FacultySubjectSelector";
 import FormContainer from "@/components/form/FormContainer";
+import { useSelector } from "react-redux";
 
 function CreateFeedbackForm() {
   const [formType, setFormType] = useState("theory");
   const [selectedClasses, setSelectedClasses] = useState([]);
-  const [targetType, setTargetType] = useState("CLASS");
+  const [targetType, setTargetType] = useState("DEPARTMENT");
 
   return (
     <div>

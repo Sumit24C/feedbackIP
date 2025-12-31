@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { Loader2 } from "lucide-react";
 function FeedbackForm() {
-  const { form_id } = useParams();
+  const { form_id, fs_id } = useParams();
   const navigate = useNavigate();
   const api = useAxiosPrivate();
 
@@ -17,7 +17,8 @@ function FeedbackForm() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get(`/student/${form_id}`);
+        const url = fs_id ? `/student/${form_id}/${fs_id}` : `/student/${form_id}`;
+        const res = await api.get(url);
         setFormData(res.data.data);
       } catch (error) {
         alert(extractErrorMsg(error));
@@ -68,7 +69,8 @@ function FeedbackForm() {
     if (!isComplete) return;
     setSubmitLoading(true);
     try {
-      await api.post(`/student/${form_id}`, facultySubjectResponse);
+      const url = `/student/${form_id}`;
+      await api.post(url, facultySubjectResponse);
       alert("Feedback submitted successfully");
       navigate("/student/forms");
     } catch {
@@ -91,8 +93,8 @@ function FeedbackForm() {
     return <p className="text-red-500 text-center mt-10">{errMsg}</p>;
   }
 
-  const isComplete = facultySubjectResponse.length === formData.facultySubjects.length && facultySubjectResponse.every(fs =>
-    fs.ratings.length === formData.questions.length
+  const isComplete = facultySubjectResponse?.length === formData.facultySubjects?.length && facultySubjectResponse?.every(fs =>
+    fs.ratings.length === formData.questions?.length
   );
 
   const expired =
@@ -109,32 +111,41 @@ function FeedbackForm() {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
             {formData.title}
           </h2>
-          <span
-            className={`inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full
+          <div className="flex flex-col justify-center items-center">
+            <span
+              className={`mt-2 px-3 py-1 text-c font-semibold rounded-full`}
+            >
+              {formData.formType}
+            </span>
+            <span
+              className={`mt-2 px-3 py-1 text-xs font-semibold rounded-full
               ${expired
-                ? "bg-red-100 text-red-700"
-                : "bg-gray-100 text-gray-700"
-              }
-            `}
-          >
-            Deadline: {new Date(formData.deadline).toLocaleDateString()}
-          </span>
+                  ? "bg-red-100 text-red-700"
+                  : "bg-gray-100 text-gray-700"
+                }
+              `}
+            >
+              Deadline: {new Date(formData.deadline).toLocaleDateString()}
+            </span>
+          </div>
         </div>
 
         <div className="space-y-8">
-          {formData.facultySubjects.map((fs) => (
+          {formData.facultySubjects?.map((fs) => (
             <div
               key={fs._id}
               className="bg-gray-50 rounded-xl border p-4 sm:p-6 space-y-4"
             >
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {fs.subject.name}
-                </h3>
-                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full inline-block mt-1">
-                  Faculty: {fs.facultyName}
-                </span>
-              </div>
+              {formData.formType !== "infrastructure" && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {fs.subject.name}
+                  </h3>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full inline-block mt-1">
+                    Faculty: {fs.facultyName}
+                  </span>
+                </div>
+              )}
 
               {formData.questions.map((q, i) => (
                 <div
@@ -145,7 +156,6 @@ function FeedbackForm() {
                     {i + 1}. {q.text}
                     <span className="ml-1 text-red-500">*</span>
                   </p>
-
 
                   <select
                     defaultValue=""

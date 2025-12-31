@@ -6,43 +6,78 @@ import { User } from "../models/user.model.js"
 import { Student } from "../models/student.model.js"
 import { Faculty } from "../models/faculty.model.js";
 import { accessTokenExpiry, refreshTokenExpiry, COOKIE_OPTIONS } from "../constants.js";
+import { Admin } from "../models/admin.model.js";
+import mongoose from "mongoose";
 
 export const registerAdmin = asyncHandler(async (req, res) => {
     const { fullname, email, password, role } = req.body;
 
     if ([fullname, email, password, role].some(
-        (field) => !field || field?.trim() === ""
+        (field) => !field || field.trim() === ""
     )) {
         throw new ApiError(400, "All fields are required");
     }
 
-    const existedUser = await User.findOne({ email: email });
-
+    const existedUser = await User.findOne({ email });
     if (existedUser) {
-        throw new ApiError(409, "User alreadt exists");
+        throw new ApiError(409, "User already exists");
     }
 
-    const user = await User.create({
-        email, fullname, role, password
-    });
+    const session = await mongoose.startSession();
 
-    if (!user) {
+    try {
+        session.startTransaction();
+        const user = await User.create(
+            [{
+                fullname,
+                email,
+                password,
+                role
+            }],
+            { session }
+        );
+        await Admin.create(
+            [{
+                user_id: user[0]._id
+            }],
+            { session }
+        );
+
+        const accessToken = user[0].generateAccessToken();
+        const refreshToken = user[0].generateRefreshToken();
+
+        user[0].refreshToken = refreshToken;
+        await user[0].save({ session, validateBeforeSave: false });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        const loggedInUser = await User.findById(user[0]._id)
+            .select("-password -refreshToken");
+
+        return res
+            .status(201)
+            .cookie("accessToken", accessToken, {
+                ...COOKIE_OPTIONS,
+                maxAge: accessTokenExpiry,
+            })
+            .cookie("refreshToken", refreshToken, {
+                ...COOKIE_OPTIONS,
+                maxAge: refreshTokenExpiry,
+            })
+            .json(
+                new ApiResponse(
+                    201,
+                    { admin: loggedInUser },
+                    "Admin registered successfully"
+                )
+            );
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         throw new ApiError(500, "Failed to create user");
     }
-
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
-    user.refreshToken = refreshToken;
-
-    await user.save({ validateBeforeSave: false });
-    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-
-    return res.status(200)
-        .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
-        .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
-        .json(
-            new ApiResponse(200, { admin: loggedInUser }, "successfully register")
-        );
 });
 
 export const loginUser = asyncHandler(async (req, res) => {

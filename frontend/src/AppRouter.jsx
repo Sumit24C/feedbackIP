@@ -10,7 +10,7 @@ import {
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
 import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject } from './pages/admin'
 import { AttendanceList, FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage, SubjectAttendance } from './pages/student'
-import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyDashboard, FacultyProfilePage, OverallSummary, Questions, QuestionSummary, CreateAttendance, ClassAttendance, AttendanceDashboard } from './pages/faculty'
+import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyProfilePage, OverallSummary, Questions, QuestionSummary, CreateAttendance, ClassAttendance, AttendanceDashboard, FeedbackResponse } from './pages/faculty'
 import NoAccess from './pages/NoAccess'
 function AppRouter() {
     return (
@@ -26,6 +26,8 @@ function AppRouter() {
                             <Route path='department' element={<DepartmentList />} />
                             <Route path='faculty-subject' element={<UploadFacultySubject />} />
                             <Route path='department/:dept_id' element={<Department />} />
+                            <Route path="create-form" element={<CreateFeedbackForm />} />
+                            <Route path="all-forms" element={<AllForms />} />
                         </Route>
 
                         {/* Student routes */}
@@ -35,7 +37,7 @@ function AppRouter() {
                             <Route path='attendance' element={<AttendanceList />} />
                             <Route path='attendance/:id' element={<SubjectAttendance />} />
                             <Route path="forms" element={<FeedbackFormList />} />
-                            <Route path="form/:form_id" element={<FeedbackForm />} />
+                            <Route path="form/:form_id/:fs_id?" element={<FeedbackForm />} />
                         </Route>
 
                         {/* Faculty routes */}
@@ -43,7 +45,7 @@ function AppRouter() {
                             <Route path='profile' element={<FacultyProfilePage />} />
                             <Route path="create-form" element={<CreateFeedbackForm />} />
                             <Route path="form/:form_id" element={<CreateFeedbackForm />} />
-                            <Route path='dashboard/:form_id' element={<FacultyDashboard />} >
+                            <Route path='feedback/:form_id' element={<FeedbackResponse />} >
                                 <Route index element={<OverallSummary />} />
                                 <Route path="subject/:subjectId" element={<QuestionSummary />} />
                             </Route>

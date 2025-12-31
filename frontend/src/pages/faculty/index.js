@@ -1,5 +1,5 @@
 import CreateFeedbackForm from "./CreateFeedbackForm";
-import FacultyDashboard from "./FacultyDashboard";
+import FeedbackResponse from "./FeedbackResponse";
 import AllForms from "./AllForms";
 import OverallSummary from "./OverallSummary";
 import QuestionSummary from "./QuestionSummary";
@@ -11,7 +11,7 @@ import ClassAttendance from "./attendance/ClassAttendance";
 import CreateAttendance from "./attendance/CreateAttendance";
 export {
     CreateFeedbackForm,
-    FacultyDashboard,
+    FeedbackResponse,
     AllForms,
     OverallSummary,
     QuestionSummary,

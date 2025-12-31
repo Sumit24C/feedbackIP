@@ -9,7 +9,8 @@ const adminSchema = new mongoose.Schema({
     permission: {
         type: String,
     }
-}, { timestamps: true })
+}, { timestamps: true });
+
 adminSchema.plugin(mongooseAggregatePaginate);
 const Admin = mongoose.model("Admin", adminSchema);
 

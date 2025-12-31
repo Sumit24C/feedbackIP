@@ -59,7 +59,7 @@ function ClassAttendance() {
         currentPage,
         facultySubject: fs,
       } = res.data.data;
-  
+
       setAttendanceRecord(attendance_record);
       setTotalPages(pages);
       setFacultySubject(fs);
@@ -238,14 +238,16 @@ function ClassAttendance() {
               className="w-[110px] h-9 sm:w-4xs"
             />
 
-            <Button
-              className="cursor-pointer"
-              size="sm"
-              onClick={() => handleCreateAttendance()}
-              disabled={!attendanceTime}
-            >
-              Create
-            </Button>
+            {!isCreating && (
+              <Button
+                className="cursor-pointer"
+                size="sm"
+                onClick={() => handleCreateAttendance()}
+                disabled={!attendanceTime}
+              >
+                Create
+              </Button>
+            )}
 
             {isCreating && (
               <div className="flex items-center gap-2">

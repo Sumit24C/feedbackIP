@@ -14,7 +14,7 @@ const formSchema = new mongoose.Schema({
     },
     targetType: {
         type: String,
-        enum: ["CLASS", "DEPARTMENT", "GLOBAL"],
+        enum: ["CLASS", "DEPARTMENT", "INSTITUTE"],
         required: true
     },
     facultySubject: [{
@@ -26,6 +26,10 @@ const formSchema = new mongoose.Schema({
         ref: "Department"
     }],
     deadline: {
+        type: Date,
+        required: true
+    },
+    startDate: {
         type: Date,
         required: true
     },
@@ -51,18 +55,6 @@ const formSchema = new mongoose.Schema({
         required: true
     }
 }, { timestamps: true });
-
-formSchema.pre("findOneAndDelete", async function (next) {
-    const form = await this.model.findOne(this.getFilter());
-
-    if (form?.questions?.length) {
-        await mongoose.model("Question").deleteMany({
-            _id: { $in: form.questions }
-        });
-    }
-
-    next();
-});
 
 const Form = mongoose.model("Form", formSchema);
 

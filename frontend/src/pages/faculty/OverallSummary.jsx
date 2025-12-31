@@ -10,6 +10,8 @@ import {
 } from "chart.js";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -20,20 +22,22 @@ const OverallSummary = () => {
   const { form_id } = useParams();
 
   useEffect(() => {
-    if (!form_id) return;
-    setLoading(true);
-
-    axios
-      .get(`/faculty/overall-result/${form_id}`)
-      .then((res) => {
+    (async function () {
+      if (!form_id) return;
+      setLoading(true);
+      try {
+        const res = await axios.get(`/faculty/overall-result/${form_id}`)
         setGraphData(res.data.data);
+      } catch (error) {
+        toast.error(extractErrorMsg(error) || "summary not found");
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    })();
   }, [form_id]);
 
-  const labels = graphData.map((item) => item._id);
-  const avgRatings = graphData.map((item) => Number(item.avgRating) || 0);
+  const labels = graphData?.map((item) => `${item.classSection + "-" + item.classYear}`);
+  const avgRatings = graphData?.map((item) => Number(item.avgRating) || 0);
   const totalResponses = graphData.map(
     (item) => Number(item.totalResponses) || 0
   );
@@ -43,19 +47,18 @@ const OverallSummary = () => {
     datasets: [
       {
         label: "Average Rating",
-        data: avgRatings,              
+        data: avgRatings,
         backgroundColor: "#4f8cff",
         borderRadius: 6,
       },
     ],
   };
 
-
   const options = {
     responsive: true,
     plugins: {
       legend: {
-        display: false, // cleaner UI
+        display: false,
       },
       tooltip: {
         callbacks: {
@@ -79,7 +82,7 @@ const OverallSummary = () => {
       },
       y: {
         beginAtZero: true,
-        max: 5, // ⭐ rating scale (important UX)
+        max: 5,
         ticks: {
           stepSize: 1,
           color: "black",
@@ -87,8 +90,6 @@ const OverallSummary = () => {
       },
     },
   };
-
-
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center">

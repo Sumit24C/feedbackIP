@@ -10,6 +10,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { toast } from "sonner";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -25,15 +27,18 @@ const QuestionSummary = () => {
     fetchQuestionData();
   }, [subjectId, form_id]);
 
-  const fetchQuestionData = () => {
+  const fetchQuestionData = async () => {
     setLoading(true);
-    axios
-      .get(`/faculty/s/${form_id}/${subjectId}`)
-      .then((res) => {
-        setGraphData(res.data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    setLoading(true);
+    try {
+      const url = `/faculty/subject/${form_id}/${subjectId}`
+      const res = await axios.get(`/faculty/subject/${form_id}/${subjectId}`);
+      setGraphData(res.data.data);
+    } catch (error) {
+      toast.error(extractErrorMsg(error) || "Failed to fetch summary");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const labels = graphData.map((item) => `Q-${item.questionId.slice(-4)}`);

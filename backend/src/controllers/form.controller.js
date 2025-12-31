@@ -30,16 +30,18 @@ export const createForm = asyncHandler(async (req, res) => {
     const {
         title,
         formType,
+        startDate,
         deadline,
         questions = [],
+        existingQuestionIds = [],
         facultySubject = [],
         dept = [],
         ratingConfig,
         targetType,
     } = req.body;
 
-    if (!title || !deadline || !formType || !targetType) {
-        throw new ApiError(403, "Title, form type, targetType and deadline are required");
+    if (!title || !deadline || !formType || !targetType || !startDate) {
+        throw new ApiError(403, "Title, form type, targetType, startDate and deadline are required");
     }
 
     if (
@@ -51,7 +53,10 @@ export const createForm = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Invalid rating configuration");
     }
 
-    if (!Array.isArray(questions) || questions.length === 0) {
+    if (
+        (!Array.isArray(questions) || questions.length === 0) &&
+        (!Array.isArray(existingQuestionIds) || existingQuestionIds.length === 0)
+    ) {
         throw new ApiError(403, "At least one question is required");
     }
 
@@ -59,36 +64,60 @@ export const createForm = asyncHandler(async (req, res) => {
         if (!facultySubject.length) {
             throw new ApiError(403, "At least one class must be selected");
         }
-    } else {
+    } else if (req?.user?.role === "admin" && targetType === "DEPARTMENT") {
         if (!dept.length) {
             throw new ApiError(403, "At least one department must be selected");
         }
     }
 
     const formattedQuestions = questions.map(q => {
-        if (!q.questionText?.trim()) {
+        if (!q.trim()) {
             throw new ApiError(403, "Question text is required");
         }
-        return { questionText: q.questionText.trim() };
+        return { questionText: q.trim() };
     });
 
     const createdQuestions = await Question.insertMany(formattedQuestions);
     const questionIds = createdQuestions.map(q => q._id);
 
+    const foundQuestions = await Question.find(
+        { _id: { $in: existingQuestionIds } },
+        { _id: 1 }
+    );
+
+    if (foundQuestions.length !== existingQuestionIds.length) {
+        throw new ApiError(403, "One or more question IDs are invalid");
+    }
+
     const formObj = {
         title: title.trim(),
         createdBy: req.user._id,
         deadline,
+        startDate,
         formType,
         ratingConfig,
-        questions: questionIds,
+        questions: [...questionIds, ...existingQuestionIds],
         targetType
     };
 
-    if (targetType === "CLASS") {
-        formObj.facultySubject = facultySubject;
-    } else {
-        formObj.dept = dept;
+    if (formType !== "infrastructure") {
+        if (targetType === "CLASS") {
+            formObj.facultySubject = facultySubject;
+        } else if (targetType === "DEPARTMENT") {
+            if (req.user.role === "faculty") {
+                if (!creator?.dept) {
+                    throw new ApiError(400, "Faculty department not found");
+                }
+                formObj.dept = [creator.dept];
+            } else if (req.user.role === "admin") {
+                if (!dept || dept.length === 0) {
+                    throw new ApiError(400, "Department is required");
+                }
+                formObj.dept = dept;
+            } else {
+                throw new ApiError(403, "Unauthorized to create department form");
+            }
+        }
     }
 
     const createdForm = await Form.create(formObj);
@@ -124,6 +153,19 @@ export const getFacultyClassess = asyncHandler(async (req, res) => {
     );
 });
 
+export const getDepartments = asyncHandler(async (req, res) => {
+
+    const departments = await Department.find();
+
+    if (!departments) {
+        throw new ApiError(404, "No department found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, departments, "successfully fetched departments")
+    );
+});
+
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id } = req.params;
 
@@ -132,20 +174,21 @@ export const getFormById = asyncHandler(async (req, res) => {
     }
 
     const form = await Form.findById(form_id)
-        .populate({
-            path: "questions",
-            select: "questionText"
-        })
-        .populate({
-            path: "facultiessubjects"
-        });
+        .populate("questions", "questionText")
+        .populate("facultySubject", "_id")
+        .lean();
 
     if (!form) {
         throw new ApiError(404, "Form not found");
     }
 
+    const formattedForm = {
+        ...form,
+        facultySubject: form.facultySubject.map((fs) => fs._id)
+    };
+
     return res.status(200).json(
-        new ApiResponse(200, form, "Form fetched successfully")
+        new ApiResponse(200, formattedForm, "Form fetched successfully")
     );
 });
 
@@ -155,13 +198,33 @@ export const updateForm = asyncHandler(async (req, res) => {
         throw new ApiError(403, "FormId is required");
     }
 
+    let creator;
+    if (req.user.role === "faculty") {
+        creator = await Faculty.findOne({ user_id: req.user._id });
+        if (!creator) {
+            throw new ApiError(404, "Faculty not found");
+        }
+    }
+
     const form = await Form.findById(form_id);
     if (!form) {
         throw new ApiError(404, "Form not found");
     }
 
-    let { title, formType, questions = [], questionsId = [], deadline, ratingConfig, facultySubject = [], dept = [] } = req.body;
-    if ([title, formType, deadline]
+    let {
+        title,
+        formType,
+        questions = [],
+        existingQuestionIds = [],
+        deadline,
+        startDate,
+        ratingConfig,
+        facultySubject = [],
+        targetType,
+        dept = []
+    } = req.body;
+
+    if ([title, formType, deadline, startDate, targetType]
         .some((field) => !field || field.trim() === "")) {
         throw new ApiError(403, "All fields are required");
     }
@@ -170,30 +233,65 @@ export const updateForm = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Invalid ratings");
     };
 
-    if (!Array.isArray(questionsId)) {
+    if (!Array.isArray(existingQuestionIds)) {
         throw new ApiError(403, "Question IDs must be an array");
     }
 
+    const foundQuestions = await Question.find(
+        { _id: { $in: existingQuestionIds } },
+        { _id: 1 }
+    );
+
+    if (foundQuestions.length !== existingQuestionIds.length) {
+        throw new ApiError(403, "One or more question IDs are invalid");
+    }
+
     let createdQuestions = [];
-    if (Array.isArray(questions) && questions.length > 0) {
-        createdQuestions = await Question.insertMany(questions);
-        if (!createdQuestions || createdQuestions.length === 0) {
+
+    const formattedQuestions = questions.map(q => {
+        if (!q || typeof q !== "string" || !q.trim()) {
+            throw new ApiError(403, "Question text is required");
+        }
+        return { questionText: q.trim() };
+    });
+
+    if (formattedQuestions.length > 0) {
+        createdQuestions = await Question.insertMany(formattedQuestions);
+        if (createdQuestions.length === 0) {
             throw new ApiError(500, "Failed to create new questions");
         }
     };
-    questionsId = questionsId.concat(createdQuestions.map((q) => q._id));
+
+    existingQuestionIds = existingQuestionIds.concat(createdQuestions.map((q) => q._id));
+
     const updatedFormObj = {
         title,
         formType,
         deadline,
-        questions: questionsId,
+        startDate,
+        questions: existingQuestionIds,
+        targetType,
         ratingConfig: ratingConfig,
     }
 
-    if (form.targetType === "CLASS") {
-        updatedFormObj.facultySubject = facultySubject;
-    } else {
-        updatedFormObj.dept = dept;
+    if (formType !== "infrastructure") {
+        if (targetType === "CLASS") {
+            updatedFormObj.facultySubject = facultySubject;
+        } else if (targetType === "DEPARTMENT") {
+            if (req.user.role === "faculty") {
+                if (!creator?.dept) {
+                    throw new ApiError(400, "Faculty department not found");
+                }
+                updatedFormObj.dept = [creator.dept];
+            } else if (req.user.role === "admin") {
+                if (!dept || dept.length === 0) {
+                    throw new ApiError(400, "Department is required");
+                }
+                updatedFormObj.dept = dept;
+            } else {
+                throw new ApiError(403, "Unauthorized to create department form");
+            }
+        }
     }
 
     const updatedForm = await Form.findByIdAndUpdate(
@@ -232,26 +330,61 @@ export const deleteForm = asyncHandler(async (req, res) => {
     );
 });
 
-export const getFormsByDept = asyncHandler(async (req, res) => {
-    const faculty = await Faculty.findOne({ user_id: req.user._id });
-    if (!faculty) {
-        throw new ApiError(404, "Faculty not found");
+export const getAccessibleForms = asyncHandler(async (req, res) => {
+
+    const user_id = req?.user?._id;
+    const user_role = req?.user?.role;
+    let creator;
+    if (user_role === "faculty") {
+        creator = await Faculty.findOne({ user_id: user_id });
+        if (!creator) {
+            throw new ApiError(404, "Faculty not found");
+        }
+    } else if (user_role === "admin") {
+        creator = await Admin.findOne({ user_id: user_id });
+        if (!creator) {
+            throw new ApiError(404, "Admin not found");
+        }
+    } else {
+        throw new ApiError(403, "Unauthorized role");
+    }
+
+    const obj = {
+        $or: [
+            {
+                targetType: "CLASS",
+                createdBy: new mongoose.Types.ObjectId(user_id)
+            },
+        ]
+    }
+
+    if (user_role === "admin") {
+        obj.$or = [
+            ...obj.$or,
+            {
+                targetType: "DEPARTMENT",
+                createdBy: user_id
+            },
+            {
+                targetType: "INSTITUTE",
+            }
+        ]
+    } else if (user_role === "faculty") {
+        obj.$or = [
+            ...obj.$or,
+            {
+                targetType: "DEPARTMENT",
+                dept: creator.dept
+            },
+            {
+                targetType: "INSTITUTE",
+            }
+        ]
     }
 
     const forms = await Form.aggregate([
         {
-            $match: {
-                $or: [
-                    {
-                        targetType: "CLASS",
-                        createdBy: new mongoose.Types.ObjectId(faculty.user_id)
-                    },
-                    {
-                        targetType: "DEPARTMENT",
-                        dept: faculty.dept
-                    }
-                ]
-            }
+            $match: obj
         },
         {
             $lookup: {
@@ -283,10 +416,12 @@ export const getFormsByDept = asyncHandler(async (req, res) => {
             $project: {
                 title: 1,
                 deadline: 1,
+                startDate: 1,
                 formType: 1,
                 responseCount: "$uniqueStudents",
                 createdAt: 1,
                 createdBy: 1,
+                targetType: 1,
             }
         },
         {

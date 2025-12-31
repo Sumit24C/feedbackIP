@@ -11,6 +11,6 @@ const router = Router();
 router.use(verifyJWT, verifyRole("faculty"));
 router.route("/:form_id").get(getSubjectMapping);
 router.route("/overall-result/:form_id").get(getOverallFeedbackResult);
-router.route("/s/:form_id/:subject_mapping_id").get(getFeedbackResultBySubjects);
+router.route("/subject/:form_id/:facultySubjectId").get(getFeedbackResultBySubjects);
 
 export default router;

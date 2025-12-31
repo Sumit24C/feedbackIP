@@ -4,14 +4,20 @@ import { verifyRole } from "../middlewares/role.middleware.js"
 import {
     createForm,
     deleteForm,
+    getAccessibleForms,
+    getDepartments,
     getFacultyClassess,
     getFormById,
-    getFormsByDept,
     updateForm
 } from "../controllers/form.controller.js";
+
 const router = Router();
-router.use(verifyJWT, verifyRole("admin", "faculty"));
-router.route("/").post(createForm).get(getFormsByDept);
+router.use(verifyJWT);
+
+router.route("/admin/dept").get(verifyRole("admin"), getDepartments);
+router.route("/faculty/class").get(verifyRole("faculty"), getFacultyClassess);
+
+router.use(verifyRole("faculty", "admin"));
+router.route("/").post(createForm).get(getAccessibleForms);
 router.route("/:form_id").put(updateForm).delete(deleteForm).get(getFormById);
-router.route("/faculty/class").get(getFacultyClassess);
 export default router;

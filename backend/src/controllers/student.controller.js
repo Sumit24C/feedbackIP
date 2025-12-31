@@ -10,7 +10,7 @@ import { Subject } from "../models/subject.model.js"
 import { getClassSection, getStudentYear } from "../utils/student.utils.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
-    const { form_id } = req.params;
+    const { form_id, fs_id } = req.params;
     if (!form_id) {
         throw new ApiError(403, "Form Id is required");
     };
@@ -19,7 +19,9 @@ export const getFormById = asyncHandler(async (req, res) => {
     if (!form) {
         throw new ApiError(404, "Form not found");
     };
-    const student = await Student.findOne({ user_id: req.user._id });
+
+    const student = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
+
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
@@ -31,7 +33,9 @@ export const getFormById = asyncHandler(async (req, res) => {
     }
 
     const studentClassSection = getClassSection(student, form.formType);
+    const baseSection = getClassSection(student);
     const studentYear = getStudentYear(student);
+
     const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });
     if (existingResponse) {
         throw new ApiError(409, "Response already submitted");
@@ -43,6 +47,27 @@ export const getFormById = asyncHandler(async (req, res) => {
             new ApiResponse(200, {}, "Form is expired")
         );
     };
+
+    const payload = {
+        formId: form._id,
+        title: form.title,
+        deadline: form.deadline,
+        startDate: form.startDate,
+        formType: form.formType,
+        ratingConfig: form.ratingConfig,
+        questions: form.questions.map(q => ({
+            questionId: q._id,
+            text: q.questionText,
+            type: q.questionType
+        })),
+    };
+
+    if (form.formType === "infrastructure") {
+        payload.facultySubjects = [student.dept];
+        return res.status(200).json(
+            new ApiResponse(200, payload, "successfully fetched form")
+        );
+    }
 
     let facultySubjects = [];
     if (form.targetType === "DEPARTMENT") {
@@ -113,8 +138,11 @@ export const getFormById = asyncHandler(async (req, res) => {
             }
         ]);
     } else {
-        const facultySubjectId = form.facultySubject[0]
-        const fs = await FacultySubject.findById(facultySubjectId)
+        const fs = await FacultySubject.findOne({
+            classSection: { $in: [baseSection, student.classSection] },
+            classDepartment: student.dept,
+            classYear: studentYear
+        })
             .populate({
                 path: "faculty",
                 select: "_id user_id",
@@ -128,7 +156,7 @@ export const getFormById = asyncHandler(async (req, res) => {
             .lean();
 
         facultySubjects = [{
-            _id: facultySubjectId,
+            _id: fs_id,
             facultyId: fs.faculty?._id,
             facultyName: fs.faculty?.user_id?.fullname,
             subject: fs.subject,
@@ -141,19 +169,7 @@ export const getFormById = asyncHandler(async (req, res) => {
         throw new ApiError(500, "No faculty subjects found for this form");
     }
 
-    const payload = {
-        formId: form._id,
-        title: form.title,
-        deadline: form.deadline,
-        formType: form.formType,
-        ratingConfig: form.ratingConfig,
-        questions: form.questions.map(q => ({
-            questionId: q._id,
-            text: q.questionText,
-            type: q.questionType
-        })),
-        facultySubjects: facultySubjects,
-    };
+    payload.facultySubjects = facultySubjects;
 
     return res.status(200).json(
         new ApiResponse(200, payload, "successfully fetched form")
@@ -162,7 +178,7 @@ export const getFormById = asyncHandler(async (req, res) => {
 
 export const getForms = asyncHandler(async (req, res) => {
 
-    const student = await Student.findOne({ user_id: req.user._id });
+    const student = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
@@ -170,26 +186,35 @@ export const getForms = asyncHandler(async (req, res) => {
     const baseSection = getClassSection(student);
     const studentYear = getStudentYear(student);
 
-    const facultySubjects = await FacultySubject.find({
+    const studentFacultySubjects = await FacultySubject.find({
         classSection: { $in: [baseSection, student.classSection] },
         classDepartment: student.dept,
         classYear: studentYear
-    }).select("_id");
+    }).select("_id faculty").populate({
+        path: "faculty", select: "user_id", populate: {
+            path: "user_id", select: "fullname"
+        }
+    });
 
-    const facultySubjectIds = facultySubjects.map((fs) => fs._id);
-
+    const studentFacultySubjectIds = studentFacultySubjects.map((fs) => fs._id.toString());
     const forms = await Form.find({
         $or: [
             {
                 targetType: "CLASS",
-                facultySubject: { $in: facultySubjectIds }
+                facultySubject: { $in: studentFacultySubjectIds },
+                startDate: { $lte: new Date().toISOString() }
             },
             {
                 targetType: "DEPARTMENT",
-                dept: student.dept
+                dept: student.dept,
+                startDate: { $lte: new Date().toISOString() }
+            },
+            {
+                targetType: "INSTITUTE",
+                startDate: { $lte: new Date().toISOString() }
             }
-        ]
-    }).lean();
+        ],
+    }).lean().sort({ deadline: 1 });
 
     if (forms.length === 0) {
         throw new ApiError(404, "Forms not found");
@@ -198,13 +223,39 @@ export const getForms = asyncHandler(async (req, res) => {
     const submittedForms = await Response.find({ student: student._id }).lean();
     const submittedFormIds = submittedForms.map(r => r.form.toString());
 
-    const result = forms.map(form => ({
-        formId: form._id,
-        title: form.title,
-        deadline: form.deadline,
-        formType: form.formType,
-        status: submittedFormIds.includes(form._id.toString()) ? 'submitted' : 'pending'
-    }));
+    const result = forms.map(form => {
+        let matchedFacultySubjects = null;
+
+        if (form.targetType === "CLASS") {
+            matchedFacultySubjects = studentFacultySubjects.find(fs =>
+                form.facultySubject
+                    .map(id => id.toString())
+                    .includes(fs._id.toString())
+            );
+        }
+
+        const payload = {
+            formId: form._id,
+            title: form.title,
+            deadline: form.deadline,
+            startDate: form.startDate,
+            formType: form.formType,
+            targetType: form.targetType,
+            status: submittedFormIds.includes(form._id.toString())
+                ? "submitted"
+                : "pending"
+        };
+
+        if (form.formType === "infrastructure") {
+            payload.facultySubjectId = student.dept._id
+            payload.facultyName = student.dept.name
+        } else {
+            payload.facultyName = matchedFacultySubjects?.faculty?.user_id?.fullname || null
+            payload.facultySubjectId = matchedFacultySubjects?._id || null
+        }
+
+        return payload
+    });
 
     res.status(200).json({
         success: true,
@@ -219,6 +270,7 @@ export const submitResponse = asyncHandler(async (req, res) => {
     if (!form_id) {
         throw new ApiError(403, "Form Id is required");
     };
+
 
     const form = await Form.findById(form_id);
     if (!form) {
@@ -251,7 +303,7 @@ export const submitResponse = asyncHandler(async (req, res) => {
         dept: student.dept,
         form: form._id,
         student: student._id,
-        facultySubject: fs._id,
+        facultySubject: new mongoose.Types.ObjectId(fs._id),
         ratings: fs.ratings,
     }));
 
