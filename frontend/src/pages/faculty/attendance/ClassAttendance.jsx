@@ -83,7 +83,7 @@ function ClassAttendance() {
 
   const attendancePercentMap = useMemo(() => {
     return Object.fromEntries(
-      attendanceSummary.map(s => [s.studentId, s.totalAttendancePercent])
+      attendanceSummary?.map(s => [s.studentId, s.totalAttendancePercent])
     );
   }, [attendanceSummary]);
 

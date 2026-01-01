@@ -6,7 +6,6 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
-import { Subject } from "../models/subject.model.js"
 import { getClassSection, getStudentYear } from "../utils/student.utils.js"
 
 export const getFormById = asyncHandler(async (req, res) => {

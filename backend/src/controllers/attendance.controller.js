@@ -585,6 +585,7 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
     });
 
     const totalPages = Math.ceil(attendanceCount / limitNumber);
+
     if (attendanceCount === 0) {
         const academic_year = getStudentAcademicYear(facultySubject.classYear);
         const studentClassSection = facultySubject.classSection[0];
@@ -594,8 +595,8 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
             academic_year: academic_year,
         }
 
-        const section = parseInt(facultySubject.classSection[1]);
         if (facultySubject.formType === "practical") {
+            const section = parseInt(facultySubject.classSection[1]);
             if (facultySubject.classYear === "FY") {
                 if (section == 1) {
                     studentObj.roll_no = { $lte: 22 };
@@ -612,9 +613,10 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
                 }
             }
         }
-        const student = await Student.find({
-            ...studentObj
-        }).populate("user_id", "fullname email").select("roll_no");
+
+        const student = await Student.find(studentObj)
+            .populate("user_id", "fullname email")
+            .select("roll_no");
 
         const attendance_record = student.map((s) =>
         ({
@@ -737,16 +739,6 @@ export const getAllStudentAttendanceCountByClass = asyncHandler(async (req, res)
         throw new ApiError(400, "Faculty Subject is required");
     }
 
-    const facultySubject = await FacultySubject
-        .findById(faculty_subject)
-        .populate(
-            "subject", "name subject_code"
-        ).select("classSection formType classYear classDepartment");
-
-    if (!facultySubject) {
-        throw new ApiError(404, "Faculty not found for this subject");
-    }
-
     const attendance_record = await Attendance.aggregate([
         {
             $match: {
@@ -796,10 +788,6 @@ export const getAllStudentAttendanceCountByClass = asyncHandler(async (req, res)
             },
         },
     ]);
-
-    if (!Array.isArray(attendance_record) || attendance_record.length === 0) {
-        throw new ApiError(500, "Failed to fetch students attendance");
-    }
 
     return res.status(200).json(
         new ApiResponse(200, attendance_record, "successfully fetched attendance of each student")
