@@ -26,16 +26,13 @@ export const getFormById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Student not found");
     }
 
-    if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept)) {
-        return res.status(200).json(
-            new ApiResponse(200, {}, "Not your department")
-        );
+    if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept._id)) {
+        throw new ApiError(404, "Department not found");
     }
 
     const studentClassSection = getClassSection(student, form.formType);
-    const baseSection = getClassSection(student);
-    const studentYear = getStudentYear(student);
-
+    const baseSection = student.classSection;
+    const studentYear = getStudentYear(student.academic_year);
     const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });
     if (existingResponse) {
         throw new ApiError(409, "Response already submitted");
@@ -43,9 +40,7 @@ export const getFormById = asyncHandler(async (req, res) => {
 
     const today = new Date();
     if (form.deadline < today) {
-        return res.status(200).json(
-            new ApiResponse(200, {}, "Form is expired")
-        );
+        throw new ApiError(409, "Form is expired");
     };
 
     const payload = {
@@ -63,7 +58,7 @@ export const getFormById = asyncHandler(async (req, res) => {
     };
 
     if (form.formType === "infrastructure") {
-        payload.facultySubjects = [student.dept];
+        payload.facultySubjects = [student.dept?._id];
         return res.status(200).json(
             new ApiResponse(200, payload, "successfully fetched form")
         );
@@ -74,7 +69,7 @@ export const getFormById = asyncHandler(async (req, res) => {
         facultySubjects = await FacultySubject.aggregate([
             {
                 $match: {
-                    classDepartment: student.dept,
+                    classDepartment: student.dept?._id,
                     classSection: studentClassSection.trim(),
                     formType: form.formType,
                     classYear: studentYear,
@@ -140,7 +135,7 @@ export const getFormById = asyncHandler(async (req, res) => {
     } else {
         const fs = await FacultySubject.findOne({
             classSection: { $in: [baseSection, student.classSection] },
-            classDepartment: student.dept,
+            classDepartment: student.dept?._id,
             classYear: studentYear
         })
             .populate({
@@ -184,11 +179,10 @@ export const getForms = asyncHandler(async (req, res) => {
     }
 
     const baseSection = getClassSection(student);
-    const studentYear = getStudentYear(student);
-
+    const studentYear = getStudentYear(student.academic_year);
     const studentFacultySubjects = await FacultySubject.find({
         classSection: { $in: [baseSection, student.classSection] },
-        classDepartment: student.dept,
+        classDepartment: student.dept?._id,
         classYear: studentYear
     }).select("_id faculty").populate({
         path: "faculty", select: "user_id", populate: {
@@ -206,7 +200,7 @@ export const getForms = asyncHandler(async (req, res) => {
             },
             {
                 targetType: "DEPARTMENT",
-                dept: student.dept,
+                dept: student.dept?._id,
                 startDate: { $lte: new Date().toISOString() }
             },
             {
@@ -271,7 +265,6 @@ export const submitResponse = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Form Id is required");
     };
 
-
     const form = await Form.findById(form_id);
     if (!form) {
         throw new ApiError(404, "Form not found");
@@ -281,10 +274,8 @@ export const submitResponse = asyncHandler(async (req, res) => {
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
-    if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept)) {
-        return res.status(200).json(
-            new ApiResponse(200, {}, "Not your department")
-        );
+    if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept._id)) {
+        throw new ApiError(404, "Not your Department");
     }
 
     const existingResponse = await Response.findOne({ student: student._id, form: form._id });
@@ -294,9 +285,7 @@ export const submitResponse = asyncHandler(async (req, res) => {
 
     const today = new Date();
     if (form.deadline < today) {
-        return res.status(200).json(
-            new ApiResponse(200, {}, "Form is expired")
-        );
+        throw new ApiError(409, "Form is expired");
     };
 
     const responseDocs = facultySubjectResponse.map((fs) => ({

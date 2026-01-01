@@ -100,23 +100,21 @@ export const createForm = asyncHandler(async (req, res) => {
         targetType
     };
 
-    if (formType !== "infrastructure") {
-        if (targetType === "CLASS") {
-            formObj.facultySubject = facultySubject;
-        } else if (targetType === "DEPARTMENT") {
-            if (req.user.role === "faculty") {
-                if (!creator?.dept) {
-                    throw new ApiError(400, "Faculty department not found");
-                }
-                formObj.dept = [creator.dept];
-            } else if (req.user.role === "admin") {
-                if (!dept || dept.length === 0) {
-                    throw new ApiError(400, "Department is required");
-                }
-                formObj.dept = dept;
-            } else {
-                throw new ApiError(403, "Unauthorized to create department form");
+    if (targetType === "CLASS") {
+        formObj.facultySubject = facultySubject;
+    } else if (targetType === "DEPARTMENT") {
+        if (req.user.role === "faculty") {
+            if (!creator?.dept) {
+                throw new ApiError(400, "Faculty department not found");
             }
+            formObj.dept = [creator.dept];
+        } else if (req.user.role === "admin") {
+            if (!dept || dept.length === 0) {
+                throw new ApiError(400, "Department is required");
+            }
+            formObj.dept = dept;
+        } else {
+            throw new ApiError(403, "Unauthorized to create department form");
         }
     }
 
@@ -213,18 +211,16 @@ export const updateForm = asyncHandler(async (req, res) => {
 
     let {
         title,
-        formType,
         questions = [],
         existingQuestionIds = [],
         deadline,
         startDate,
         ratingConfig,
         facultySubject = [],
-        targetType,
         dept = []
     } = req.body;
 
-    if ([title, formType, deadline, startDate, targetType]
+    if ([title, deadline, startDate]
         .some((field) => !field || field.trim() === "")) {
         throw new ApiError(403, "All fields are required");
     }
@@ -266,31 +262,27 @@ export const updateForm = asyncHandler(async (req, res) => {
 
     const updatedFormObj = {
         title,
-        formType,
         deadline,
         startDate,
         questions: existingQuestionIds,
-        targetType,
         ratingConfig: ratingConfig,
     }
 
-    if (formType !== "infrastructure") {
-        if (targetType === "CLASS") {
-            updatedFormObj.facultySubject = facultySubject;
-        } else if (targetType === "DEPARTMENT") {
-            if (req.user.role === "faculty") {
-                if (!creator?.dept) {
-                    throw new ApiError(400, "Faculty department not found");
-                }
-                updatedFormObj.dept = [creator.dept];
-            } else if (req.user.role === "admin") {
-                if (!dept || dept.length === 0) {
-                    throw new ApiError(400, "Department is required");
-                }
-                updatedFormObj.dept = dept;
-            } else {
-                throw new ApiError(403, "Unauthorized to create department form");
+    if (form.targetType === "CLASS") {
+        updatedFormObj.facultySubject = facultySubject;
+    } else if (form.targetType === "DEPARTMENT") {
+        if (req.user.role === "faculty") {
+            if (!creator?.dept) {
+                throw new ApiError(400, "Faculty department not found");
             }
+            updatedFormObj.dept = [creator.dept];
+        } else if (req.user.role === "admin") {
+            if (!dept || dept.length === 0) {
+                throw new ApiError(400, "Department is required");
+            }
+            updatedFormObj.dept = dept;
+        } else {
+            throw new ApiError(403, "Unauthorized to create department form");
         }
     }
 
@@ -430,7 +422,7 @@ export const getAccessibleForms = asyncHandler(async (req, res) => {
     ]);
 
     if (!forms.length) {
-        throw new ApiError(500, "Failed to fetch forms");
+        throw new ApiError(404, "Forms not found");
     };
 
     return res.status(200).json(

@@ -6,7 +6,8 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
 import { Faculty } from "../models/faculty.model.js"
-import { getStudentYear } from "../utils/student.utils.js"
+import { getStudentAcademicYear, getStudentYear } from "../utils/student.utils.js"
+import { Student } from "../models/student.model.js"
 
 export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
 
@@ -92,7 +93,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
         ]);
 
     } else {
-        facultySubjectIds = faculty?.dept;
         overallSummary = await Response.aggregate([
             {
                 $match: {
@@ -333,7 +333,7 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
     }
 
     return res.status(200).json(
-        new ApiResponse(200, { sections: subjectMappings, targetType: form.targetType }, "successfully fetched subjects mapping")
+        new ApiResponse(200, subjectMappings, "successfully fetched subjects mapping")
     );
 });
 
@@ -360,8 +360,8 @@ export const getFeedbackResultByClass = asyncHandler(async (req, res) => {
     const summary = await Student.aggregate([
         {
             $match: {
-                classSection: classSection,
-                classYear: classYear,
+                classSection,
+                academic_year: getStudentAcademicYear(classYear),
                 dept: faculty.dept
             }
         },
@@ -370,16 +370,23 @@ export const getFeedbackResultByClass = asyncHandler(async (req, res) => {
                 from: "responses",
                 localField: "_id",
                 foreignField: "student",
-                as: "response"
+                as: "responses",
+                pipeline: [
+                    {
+                        $match: {
+                            form: form._id
+                        }
+                    },
+                ]
             }
         },
-        { $unwind: "$response" },
-        { $unwind: "$response.ratings" },
+        { $unwind: "$responses" },
+        { $unwind: "$responses.ratings" },
         {
             $addFields: {
-                "ratings.answer": {
+                numericAnswer: {
                     $convert: {
-                        input: "$response.ratings.answer",
+                        input: "$responses.ratings.answer",
                         to: "double",
                         onError: null,
                         onNull: null
@@ -389,8 +396,8 @@ export const getFeedbackResultByClass = asyncHandler(async (req, res) => {
         },
         {
             $group: {
-                _id: "$response.ratings.questionId",
-                avgRating: { $avg: "$ratings.answer" },
+                _id: "$responses.ratings.questionId",
+                avgRating: { $avg: "$numericAnswer" }
             }
         },
         {
@@ -404,83 +411,78 @@ export const getFeedbackResultByClass = asyncHandler(async (req, res) => {
         { $unwind: "$question" },
         {
             $project: {
+                _id: 0,
                 questionId: "$question._id",
                 questionText: "$question.questionText",
-                avgRating: 1,
+                avgRating: { $round: ["$avgRating", 2] }
             }
         }
     ]);
 
-    const subjectQuestionSummary = await Response.aggregate([
-        {
-            $match: {
-                form: new mongoose.Types.ObjectId(form_id),
-            }
-        },
-        { $unwind: "$ratings" },
-        {
-            $addFields: {
-                "ratings.answer": {
-                    $convert: {
-                        input: "$ratings.answer",
-                        to: "double",
-                        onError: null,
-                        onNull: null
-                    }
-                }
-            }
-        },
-        {
-            $group: {
-                _id: "$ratings.questionId",
-                avgRating: { $avg: "$ratings.answer" },
-            }
-        },
-        {
-            $lookup: {
-                from: "questions",
-                localField: "_id",
-                foreignField: "_id",
-                as: "question"
-            }
-        },
-        { $unwind: "$question" },
-        {
-            $project: {
-                questionId: "$question._id",
-                questionText: "$question.questionText",
-                avgRating: 1,
-            }
-        }
-    ]);
+    if (summary.length === 0) {
+        throw new ApiError(404, "No feedback found");
+    }
 
     return res.status(200).json(
         new ApiResponse(
             200,
-            subjectQuestionSummary.length > 0 ? subjectQuestionSummary : [],
+            summary.length > 0 ? summary : [],
             "successfully fetched question summary"
         )
     );
 });
 
-export const getAllDepartmentClass = asyncHandler(async (req, res) => {
+export const getDepartmentClass = asyncHandler(async (req, res) => {
     const faculty = await Faculty.findOne({ user_id: req.user._id });
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
     }
 
+    const { form_id } = req.params;
+    const form = await Form.findById(form_id).select("_id");
+
+    if (!form) {
+        throw new ApiError(404, "Form not found");
+    }
+
     const matchStage = faculty.dept
-        ? { dept: new mongoose.Types.ObjectId(dept_id) }
+        ? { dept: new mongoose.Types.ObjectId(faculty.dept) }
         : {};
 
     const classSections = await Student.aggregate([
         { $match: matchStage },
         {
+            $lookup: {
+                from: "responses",
+                localField: "_id",
+                foreignField: "student",
+                as: "responses",
+                pipeline: [
+                    {
+                        $match: {
+                            form: form._id
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                totalResponses: { $size: "$responses" }
+            }
+        },
+        {
             $group: {
                 _id: {
                     classSection: "$classSection",
                     academic_year: "$academic_year"
-                }
+                },
+                totalResponses: { $sum: "$totalResponses" }
             }
         },
         {
@@ -488,18 +490,26 @@ export const getAllDepartmentClass = asyncHandler(async (req, res) => {
                 _id: 0,
                 classSection: "$_id.classSection",
                 academic_year: "$_id.academic_year",
+                totalResponses: 1
             }
         },
         {
             $sort: {
-                classYear: 1,
+                academic_year: 1,
                 classSection: 1
             }
         }
     ]);
 
+    const payload = classSections.map((cs) => ({
+        ...cs,
+        classYear: getStudentYear(cs.academic_year),
+        formType: "infrastructure",
+        _id: getStudentYear(cs.academic_year) + '_' + cs.classSection
+    }));
+
     return res.status(200).json(
-        new ApiResponse(200, { sections: classSections, targetType: "INSTITUTE"}, "Class sections fetched successfully")
+        new ApiResponse(200, payload, "Class sections fetched successfully")
     );
 });
 

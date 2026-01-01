@@ -563,14 +563,13 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
     );
 });
 
-export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) => {
+export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
     const { faculty_subject } = req.params;
     if (!faculty_subject) {
         throw new ApiError(400, "Faculty Subject is required");
     }
     const pageNumber = Math.max(parseInt(req.query.page) || 1, 1);
     const limitNumber = Math.max(parseInt(req.query.limit) || 5, 1);
-
     const facultySubject = await FacultySubject
         .findById(faculty_subject)
         .populate(
@@ -729,5 +728,80 @@ export const getStudentAttendanceByClassSection = asyncHandler(async (req, res) 
 
     return res.status(200).json(
         new ApiResponse(200, response, "successfully fetched attendance for class")
+    )
+});
+
+export const getAllStudentAttendanceCountByClass = asyncHandler(async (req, res) => {
+    const { faculty_subject } = req.params;
+    if (!faculty_subject) {
+        throw new ApiError(400, "Faculty Subject is required");
+    }
+
+    const facultySubject = await FacultySubject
+        .findById(faculty_subject)
+        .populate(
+            "subject", "name subject_code"
+        ).select("classSection formType classYear classDepartment");
+
+    if (!facultySubject) {
+        throw new ApiError(404, "Faculty not found for this subject");
+    }
+
+    const attendance_record = await Attendance.aggregate([
+        {
+            $match: {
+                facultySubject: new mongoose.Types.ObjectId(faculty_subject),
+            },
+        },
+        { $unwind: "$students" },
+        {
+            $group: {
+                _id: "$students.student",
+                totalAttendance: {
+                    $sum: {
+                        $cond: ["$students.isPresent", 1, 0],
+                    },
+                },
+                totalRecord: { $sum: 1 },
+            },
+        },
+        {
+            $addFields: {
+                totalAttendancePercent: {
+                    $cond: [
+                        { $eq: ["$totalRecord", 0] },
+                        0,
+                        {
+                            $round: [
+                                {
+                                    $multiply: [
+                                        { $divide: ["$totalAttendance", "$totalRecord"] },
+                                        100
+                                    ]
+                                },
+                                2
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                studentId: "$_id",
+                totalAttendance: 1,
+                totalRecord: 1,
+                totalAttendancePercent: 1,
+            },
+        },
+    ]);
+
+    if (!Array.isArray(attendance_record) || attendance_record.length === 0) {
+        throw new ApiError(500, "Failed to fetch students attendance");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, attendance_record, "successfully fetched attendance of each student")
     )
 });
