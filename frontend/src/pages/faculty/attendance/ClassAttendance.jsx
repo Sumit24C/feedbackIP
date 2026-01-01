@@ -3,30 +3,18 @@ import { useParams } from "react-router-dom";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import AttendanceTable from "@/components/attendance/AttendanceTable";
+import AttendanceControls from "@/components/attendance/AttendanceControls";
 
 function ClassAttendance() {
   const api = useAxiosPrivate();
   const { id } = useParams();
 
-  const [loading, setLoading] = useState(true);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
 
   const [attendanceRecord, setAttendanceRecord] = useState([]);
@@ -45,13 +33,12 @@ function ClassAttendance() {
 
   const [editingSessionId, setEditingSessionId] = useState(null);
   const [editableSession, setEditableSession] = useState(null);
+  const [attendanceSummary, setAttendanceSummary] = useState([]);
 
   const fetchAttendance = async (page) => {
+    setAttendanceLoading(true);
     try {
-      setLoading(true);
-      const res = await api.get(
-        `/attendance/faculty/student/class/${id}?page=${page}&limit=${limit}`
-      );
+      const res = await api.get(`/attendance/faculty/student/class/${id}?page=${page}&limit=${limit}`);
 
       const {
         attendance_record,
@@ -59,19 +46,18 @@ function ClassAttendance() {
         currentPage,
         facultySubject: fs,
       } = res.data.data;
-
       setAttendanceRecord(attendance_record);
       setTotalPages(pages);
       setFacultySubject(fs);
       const initial = {};
       attendance_record.forEach((s) => {
-        initial[s._id] = false;
+        initial[s._id] = true;
       });
       setNewAttendance(initial);
     } catch (error) {
       setErrMsg(extractErrorMsg(error));
     } finally {
-      setLoading(false);
+      setAttendanceLoading(false);
     }
   }
 
@@ -80,6 +66,26 @@ function ClassAttendance() {
       await fetchAttendance(page);
     })();
   }, [id, page]);
+
+  useEffect(() => {
+    (async () => {
+      setSummaryLoading(true);
+      try {
+        const res = await api.get(`/attendance/faculty/student/summary/${id}`);
+        setAttendanceSummary(res.data.data);
+      } catch (error) {
+        setErrMsg(extractErrorMsg(error));
+      } finally {
+        setSummaryLoading(false);
+      }
+    })()
+  }, []);
+
+  const attendancePercentMap = useMemo(() => {
+    return Object.fromEntries(
+      attendanceSummary.map(s => [s.studentId, s.totalAttendancePercent])
+    );
+  }, [attendanceSummary]);
 
   const toggleAttendance = (studentId) => {
     setNewAttendance((prev) => ({
@@ -188,7 +194,7 @@ function ClassAttendance() {
     }
   };
 
-  if (loading) {
+  if (attendanceLoading || summaryLoading) {
     return (
       <div className="flex justify-center mt-32">
         <div className="w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin" />
@@ -220,109 +226,30 @@ function ClassAttendance() {
         </div>
       </div>
 
-      <Card className="mb-4 p-4">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-0 sm:p-3">
-          <div className="flex flex-wrap items-center gap-2 p-0">
-            <Input
-              type="date"
-              value={attendanceDate}
-              onChange={(e) => setAttendanceDate(e.target.value)}
-              className="w-[120px] h-9 sm:w-4xs"
-            />
+      <AttendanceControls
+        attendanceDate={attendanceDate}
+        setAttendanceDate={setAttendanceDate}
+        attendanceTime={attendanceTime}
+        setAttendanceTime={setAttendanceTime}
 
-            <Input
-              type="time"
-              step="1800"
-              value={attendanceTime}
-              onChange={(e) => setAttendanceTime(e.target.value)}
-              className="w-[110px] h-9 sm:w-4xs"
-            />
+        isCreating={isCreating}
+        submitLoading={submitLoading}
+        editingSessionId={editingSessionId}
 
-            {!isCreating && (
-              <Button
-                className="cursor-pointer"
-                size="sm"
-                onClick={() => handleCreateAttendance()}
-                disabled={!attendanceTime}
-              >
-                Create
-              </Button>
-            )}
+        onCreate={handleCreateAttendance}
+        onSubmit={submitAttendance}
+        onUpdate={handleUpdateSession}
+        onCancelCreate={() => setIsCreating(false)}
+        onCancelEdit={() => {
+          setEditingSessionId(null);
+          setEditableSession(null);
+        }}
 
-            {isCreating && (
-              <div className="flex items-center gap-2">
+        page={page}
+        totalPages={totalPages}
+        setPage={setPage}
+      />
 
-                <Button
-                  size="sm"
-                  variant="success"
-                  className="cursor-pointer bg-black text-white"
-                  onClick={submitAttendance}
-                  disabled={submitLoading}
-                >
-                  {submitLoading ? "Saving…" : "Save"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setIsCreating(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
-
-            {editingSessionId && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="success"
-                  className="cursor-pointer bg-black text-white"
-                  onClick={handleUpdateSession}
-                >
-                  Save Update
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingSessionId(null);
-                    setEditableSession(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Previous
-            </Button>
-
-            <span className="text-sm text-muted-foreground">
-              Page {page} / {totalPages}
-            </span>
-
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
       <div
         className={`grid gap-6 ${studentChunks.length > 1
           ? "grid-cols-1 lg:grid-cols-2"
@@ -330,160 +257,23 @@ function ClassAttendance() {
           }`}
       >
         {studentChunks.map((students, idx) => (
-          <Card key={idx} className="p-0">
-            <CardContent className="p-0 overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[70px] text-center">Roll</TableHead>
-
-                    <TableHead className="max-w-[180px] truncate text-center hidden sm:table-cell">
-                      Name
-                    </TableHead>
-
-
-                    {isCreating && (
-                      <TableHead className="text-center whitespace-nowrap">
-                        {new Date(
-                          `${attendanceDate}T${attendanceTime}`
-                        ).toLocaleString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </TableHead>
-                    )}
-
-                    {latestDates.map((session) => (
-                      <TableHead
-                        key={session._id}
-                        className="text-center whitespace-nowrap"
-                      >
-                        {editingSessionId === session._id ? (
-                          <Input
-                            type="datetime-local"
-                            value={editableSession.date.slice(0, 16)}
-                            onChange={(e) =>
-                              setEditableSession((prev) => ({
-                                ...prev,
-                                date: new Date(e.target.value).toISOString(),
-                              }))
-                            }
-                            className="h-8 w-2/3"
-                          />
-                        ) : (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="font-medium hover:underline">
-                                {new Date(session.date).toLocaleString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </button>
-                            </DropdownMenuTrigger>
-
-                            <DropdownMenuContent align="center" className="w-28">
-                              <DropdownMenuItem
-                                onClick={() => startUpdateSession(session._id)}
-                              >
-                                Update
-                              </DropdownMenuItem>
-
-                              <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => handleDeleteSession(session._id)}
-                              >
-                                {deleteLoading ? "deleting.." : "delete"}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableHead>
-
-                    ))}
-
-                  </TableRow>
-                </TableHeader>
-
-
-                <TableBody>
-                  {students.map((student) => {
-                    const map = Object.fromEntries(
-                      student.attendance.map((a) => [a.date, a.isPresent])
-                    );
-
-                    return (
-                      <TableRow key={student._id}>
-                        <TableCell className="text-center">{student.roll_no}</TableCell>
-                        <TableCell
-                          className="hidden sm:table-cell max-w-[180px] text-center font-medium overflow-hidden whitespace-nowrap text-ellipsis"
-                          title={student.fullname}
-                        >
-                          {student.fullname}
-                        </TableCell>
-
-                        {isCreating && (
-                          <TableCell className="text-center">
-                            <Button
-                              className="h-5 w-5"
-                              variant={
-                                newAttendance[student._id]
-                                  ? "success"
-                                  : "destructive"
-                              }
-                              onClick={() =>
-                                toggleAttendance(student._id)
-                              }
-                            >
-                              {newAttendance[student._id] ? "P" : "A"}
-                            </Button>
-                          </TableCell>
-                        )}
-
-                        {latestDates.map((session) => {
-                          const isEditing = editingSessionId === session._id;
-                          const value = isEditing
-                            ? editableSession.students[student._id]
-                            : map[session.date];
-
-                          return (
-                            <TableCell key={session._id} className="text-center">
-                              {isEditing ? (
-                                <Button
-                                  className="h-5 w-5"
-                                  variant={value ? "success" : "destructive"}
-                                  onClick={() =>
-                                    setEditableSession((prev) => ({
-                                      ...prev,
-                                      students: {
-                                        ...prev.students,
-                                        [student._id]: !value,
-                                      },
-                                    }))
-                                  }
-                                >
-                                  {value ? "P" : "A"}
-                                </Button>
-                              ) : value === undefined ? (
-                                <span className="text-muted-foreground">–</span>
-                              ) : value ? (
-                                <span className="text-green-600 font-semibold">P</span>
-                              ) : (
-                                <span className="text-red-600 font-semibold">A</span>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <AttendanceTable
+            key={idx}
+            students={students}
+            attendancePercentMap={attendancePercentMap}
+            isCreating={isCreating}
+            attendanceDate={attendanceDate}
+            attendanceTime={attendanceTime}
+            newAttendance={newAttendance}
+            toggleAttendance={toggleAttendance}
+            latestDates={latestDates}
+            editingSessionId={editingSessionId}
+            editableSession={editableSession}
+            setEditableSession={setEditableSession}
+            startUpdateSession={startUpdateSession}
+            handleDeleteSession={handleDeleteSession}
+            deleteLoading={deleteLoading}
+          />
         ))}
       </div>
     </div >

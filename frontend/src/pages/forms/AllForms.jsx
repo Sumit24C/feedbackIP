@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import FormCard from "@/components/form/FormCard";
+import FormCard from "@/components/forms/FormCard";
 
 function AllForms() {
   const axiosPrivate = useAxiosPrivate();
@@ -46,12 +46,15 @@ function AllForms() {
     }
   };
 
+
   const filteredForms = forms.filter((form) => {
     if (filter === "self") return form.createdBy === userData._id;
     if (filter === "department") return form.targetType == "DEPARTMENT";
     if (filter === "class") return form.targetType == "CLASS";
     return true;
   });
+
+  const options = userData?.role === "admin" ? ["all", "self", "department"] : ["all", "self", "class", "department"]
 
   if (loading)
     return (
@@ -71,10 +74,9 @@ function AllForms() {
             </SelectTrigger>
 
             <SelectContent>
-              <SelectItem value="all">All Forms</SelectItem>
-              <SelectItem value="self">Created by Me</SelectItem>
-              <SelectItem value="class">Class Forms</SelectItem>
-              <SelectItem value="department">Department Forms</SelectItem>
+              {options.map((opt, id) => (
+                <SelectItem key={id} value={opt}>{opt} forms</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

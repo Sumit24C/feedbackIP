@@ -10,8 +10,10 @@ import {
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
 import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject } from './pages/admin'
 import { AttendanceList, FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage, SubjectAttendance } from './pages/student'
-import { AllForms, CreateFeedbackForm, CreateQuesTemplate, FacultyProfilePage, OverallSummary, Questions, QuestionSummary, CreateAttendance, ClassAttendance, AttendanceDashboard, FeedbackResponse } from './pages/faculty'
+import { FacultyProfilePage, CreateAttendance, ClassAttendance, AttendanceDashboard } from './pages/faculty'
+import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse } from './pages/forms'
 import NoAccess from './pages/NoAccess'
+
 function AppRouter() {
     return (
         <Routes>
@@ -26,8 +28,6 @@ function AppRouter() {
                             <Route path='department' element={<DepartmentList />} />
                             <Route path='faculty-subject' element={<UploadFacultySubject />} />
                             <Route path='department/:dept_id' element={<Department />} />
-                            <Route path="create-form" element={<CreateFeedbackForm />} />
-                            <Route path="all-forms" element={<AllForms />} />
                         </Route>
 
                         {/* Student routes */}
@@ -45,13 +45,11 @@ function AppRouter() {
                             <Route path='profile' element={<FacultyProfilePage />} />
                             <Route path="create-form" element={<CreateFeedbackForm />} />
                             <Route path="form/:form_id" element={<CreateFeedbackForm />} />
-                            <Route path='feedback/:form_id' element={<FeedbackResponse />} >
+                            <Route path='feedback/:formType/:form_id' element={<FeedbackResponse />} >
                                 <Route index element={<OverallSummary />} />
                                 <Route path="subject/:subjectId" element={<QuestionSummary />} />
                             </Route>
                             <Route path="all-forms" element={<AllForms />} />
-                            <Route path="questions" element={<Questions />} />
-                            <Route path="create-question-template" element={<CreateQuesTemplate />} />
                             <Route path='view-attendance' element={<AttendanceDashboard />} />
                             <Route path='class-attendance/:id' element={<ClassAttendance />} />
                             <Route path='create-attendance/:id' element={<CreateAttendance />} />

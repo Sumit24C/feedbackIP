@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { toast } from "sonner";
-import StudentFeedbackCard from "@/components/form/StudentFeedbackCard";
+import StudentFeedbackCard from "@/components/forms/StudentFeedbackCard";
 import {
   Select,
   SelectContent,
@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 export default function FeedbackFormList() {
   const axiosPrivate = useAxiosPrivate();
@@ -22,7 +23,7 @@ export default function FeedbackFormList() {
         const res = await axiosPrivate.get("/student");
         setForms(res.data.data);
       } catch (error) {
-        toast.error("Failed to load forms");
+        toast.error(extractErrorMsg(error) || "No form found");
       } finally {
         setLoading(false);
       }

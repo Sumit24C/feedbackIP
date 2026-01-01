@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSelector } from "react-redux";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
-function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses, targetType, setTargetType }) {
+function FacultySubjectSelector({ form_id, formType, selectedClasses, setSelectedClasses, targetType, setTargetType }) {
     const axiosPrivate = useAxiosPrivate();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState([]);
@@ -70,8 +70,11 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
     };
 
     useEffect(() => {
-        clearAll();
-    }, [formType])
+        if (formType === "infrastructure") {
+            setTargetType("DEPARTMENT");
+        }
+        setSelectedClasses([]);
+    }, [formType]);
 
     return (
         <div className="w-full">
@@ -81,6 +84,7 @@ function FacultySubjectSelector({ formType, selectedClasses, setSelectedClasses,
                     {tabs.map((t) => (
                         <button
                             key={t}
+                            disabled={formType === "infrastructure" || form_id}
                             onClick={() => setTargetType(t)}
                             className={`flex-1 text-xs font-semibold py-1.5 rounded-lg transition
                             ${targetType === t

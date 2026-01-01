@@ -32,7 +32,7 @@ function FormCard({ form, handleDelete }) {
 
                 <DropdownMenuContent align="end" className="w-32">
                     <DropdownMenuItem
-                        onClick={() => navigate(`/faculty/feedback/${form._id}`)}
+                        onClick={() => navigate(`/faculty/feedback/${form.formType}/${form._id}`)}
                     >
                         View
                     </DropdownMenuItem>

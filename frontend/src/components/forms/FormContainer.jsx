@@ -17,6 +17,7 @@ import { useSelector } from "react-redux";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function FormContainer({
+    form_id,
     formType,
     setFormType,
     selectedClasses,
@@ -24,7 +25,6 @@ function FormContainer({
     targetType,
     setTargetType,
 }) {
-    const { form_id } = useParams();
     const navigate = useNavigate();
     const axiosPrivate = useAxiosPrivate();
     const { userData } = useSelector((state) => state.auth);
@@ -191,7 +191,7 @@ function FormContainer({
 
                 <div>
                     <label className="text-sm font-medium">Form Type</label>
-                    <Select value={formType} onValueChange={setFormType}>
+                    <Select disabled={form_id} value={formType} onValueChange={setFormType}>
                         <SelectTrigger className="w-full mt-1">
                             <SelectValue placeholder="Select form type" />
                         </SelectTrigger>
@@ -200,9 +200,7 @@ function FormContainer({
                                 <SelectLabel>Form Type</SelectLabel>
                                 <SelectItem value="theory">Theory</SelectItem>
                                 <SelectItem value="practical">Practical</SelectItem>
-                                {userData?.role === "admin" && (
-                                    <SelectItem value="infrastructure">Infrastructure</SelectItem>
-                                )}
+                                <SelectItem value="infrastructure">Infrastructure</SelectItem>
                                 <SelectItem value="tutorial">Tutorial</SelectItem>
                             </SelectGroup>
                         </SelectContent>
