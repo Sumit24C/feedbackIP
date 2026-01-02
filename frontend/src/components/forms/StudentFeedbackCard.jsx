@@ -15,6 +15,7 @@ function StudentFeedbackCard({ form }) {
             : `/student/form/${form.formId}/${form.facultySubjectId}`
       }
       className={`block rounded-xl border bg-white px-5 py-4
+        hover:-translate-y-0.5
         transition-all duration-200 shadow-md
         ${disabled
           ? "cursor-not-allowed opacity-70"

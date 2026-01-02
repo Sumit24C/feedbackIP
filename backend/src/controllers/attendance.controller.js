@@ -255,9 +255,20 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
         {
             $addFields: {
                 totalPercentage: {
-                    $multiply: [
-                        { $divide: ["$totalPresent", "$totalClassess"] },
-                        100
+                    $round: [
+                        {
+                            $cond: [
+                                { $eq: ["$totalClassess", 0] },
+                                0,
+                                {
+                                    $multiply: [
+                                        { $divide: ["$totalPresent", "$totalClassess"] },
+                                        100
+                                    ]
+                                }
+                            ]
+                        },
+                        2
                     ]
                 }
             }

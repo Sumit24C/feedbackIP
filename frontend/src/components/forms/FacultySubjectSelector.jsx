@@ -5,7 +5,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useSelector } from "react-redux";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
-function FacultySubjectSelector({ form_id, formType, selectedClasses, setSelectedClasses, targetType, setTargetType }) {
+function FacultySubjectSelector({
+    form_id,
+    submitAction,
+    formType,
+    selectedClasses,
+    setSelectedClasses,
+    targetType,
+    setTargetType
+}) {
     const axiosPrivate = useAxiosPrivate();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState([]);
@@ -78,13 +86,13 @@ function FacultySubjectSelector({ form_id, formType, selectedClasses, setSelecte
 
     return (
         <div className="w-full">
-            <div className="bg-white rounded-2xl shadow-md p-4 sticky top-20 space-y-4">
+            <div className="bg-white rounded-2xl shadow-md p-4 sticky top-20 space-y-4 min-w-full">
 
                 <div className="flex rounded-xl border bg-gray-50 p-1">
                     {tabs.map((t) => (
                         <button
                             key={t}
-                            disabled={formType === "infrastructure" || form_id}
+                            disabled={formType === "infrastructure" || (form_id && submitAction === "update")}
                             onClick={() => setTargetType(t)}
                             className={`flex-1 text-xs font-semibold py-1.5 rounded-lg transition
                             ${targetType === t

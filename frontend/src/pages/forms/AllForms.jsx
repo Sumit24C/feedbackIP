@@ -64,22 +64,28 @@ function AllForms() {
     );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-1">
-        <h1 className="text-2xl font-bold">Feedback Forms</h1>
-        <div className="w-fit">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Filter forms" />
-            </SelectTrigger>
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Page title */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Feedback Forms
+        </h1>
+      </div>
 
-            <SelectContent>
-              {options.map((opt, id) => (
-                <SelectItem key={id} value={opt}>{opt} forms</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="sticky top-16 z-20 bg-gray-50 border-b py-3 flex justify-end">
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Filter forms" />
+          </SelectTrigger>
+
+          <SelectContent>
+            {options.map((opt, id) => (
+              <SelectItem key={id} value={opt}>
+                {opt} forms
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {filteredForms.length === 0 ? (

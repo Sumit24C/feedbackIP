@@ -66,11 +66,10 @@ function Header() {
     <header
       className="
         w-full fixed top-0 left-0 z-50
-        bg-white/85 backdrop-blur-lg
+        bg-white
         shadow-2xs
         border-b border-blue-200/50
         px-6 py-3 flex items-center justify-between
-        transition-colors duration-300
       "
     >
       <div className="flex items-center gap-3 justify-between">

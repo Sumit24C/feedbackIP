@@ -8,7 +8,6 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center text-center px-4 gap-4">
-      {/* Animated 404 Text */}
       <motion.h1
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

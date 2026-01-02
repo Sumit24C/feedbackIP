@@ -48,34 +48,31 @@ export default function FeedbackFormList() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="mb-2">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
             Feedback Forms
           </h1>
-          <p className="text-sm text-gray-500">
-            Complete your pending feedback before the deadline.
-          </p>
         </div>
 
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Filter forms" />
-          </SelectTrigger>
+        <div className="sticky top-16 z-20 bg-gray-50 border-b py-3 flex justify-end">
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Filter forms" />
+            </SelectTrigger>
 
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="submitted">Submitted</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-          </SelectContent>
-        </Select>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="submitted">Submitted</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="border-b" />
-
-      {filteredForms.length === 0 && (
+      {filteredForms?.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-gray-50 p-12 text-center">
           <p className="font-medium text-gray-700">
             No forms found
@@ -87,7 +84,7 @@ export default function FeedbackFormList() {
       )}
 
       <div className="space-y-4">
-        {filteredForms.map((form) => (
+        {filteredForms?.map((form) => (
           <StudentFeedbackCard key={form.formId} form={form} />
         ))}
       </div>

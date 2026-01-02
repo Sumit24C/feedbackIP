@@ -15,7 +15,7 @@ function FormCard({ form, handleDelete }) {
 
     return (
         <div
-            className={`border-2 p-4 rounded-2xl shadow-md hover:shadow-md transition relative border-black
+            className={`my-4 border-2 p-4 rounded-2xl shadow-md hover:shadow-md transition relative border-black
                 ${isExpired ?
                     "border-red-500 bg-red-50"
                     : "border-gray-300"

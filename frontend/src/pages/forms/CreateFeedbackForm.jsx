@@ -9,14 +9,16 @@ function CreateFeedbackForm() {
   const [selectedClasses, setSelectedClasses] = useState([]);
   const { userData } = useSelector((state) => state.auth);
   const { form_id } = useParams();
+  const [submitAction, setSubmitAction] = useState(form_id ? "update" : "create");
 
   const [targetType, setTargetType] = useState(userData?.role === "admin" ? "INSTITUTE" : "CLASS");
 
   return (
-    <div>
-      <div className="mx-auto max-w-screen grid md:grid-cols-[1fr_3fr] justify-around gap-6 px-20">
+    <div className="flex justify-center items-center m-10">
+      <div className="mx-auto max-w-screen grid grid-rows-[1fr] sm:grid-cols-[1fr_3fr] justify-around gap-6">
         <FacultySubjectSelector
           form_id={form_id}
+          submitAction={submitAction}
           formType={formType}
           selectedClasses={selectedClasses}
           setSelectedClasses={setSelectedClasses}
@@ -25,6 +27,8 @@ function CreateFeedbackForm() {
         />
         <FormContainer
           form_id={form_id}
+          submitAction={submitAction}
+          setSubmitAction={setSubmitAction}
           formType={formType}
           setFormType={setFormType}
           selectedClasses={selectedClasses}

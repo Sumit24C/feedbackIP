@@ -49,7 +49,7 @@ export default function Login() {
     <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
       <Card className="w-full max-w-sm shadow-2xl border-none backdrop-blur-md bg-white/60 rounded-3xl m-2">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-extrabold text-blue-800">FeedBack System</CardTitle>
+          <CardTitle className="text-3xl font-extrabold text-blue-800">ClassSetu</CardTitle>
           <p className="text-sm text-gray-600">Login to continue</p>
         </CardHeader>
 

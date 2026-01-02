@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 function AttendanceCard({ attendance }) {
     return (
-        <div className="w-full min-w-60 max-w-lg sm:min-w-lg border-blue-200 border-4 rounded-xl shadow-xl bg-gray-50 p-2 sm:p-2.5 relative font-sans m-2">
+        <div className={`w-full min-w-60 max-w-lg sm:min-w-lg p-2 sm:p-2.5 m-2 relative font-sans border-2 rounded-2xl shadow-md transition hover:shadow-lg border-gray-300`}>
             <Link to={`/faculty/class-attendance/${attendance.facultySubject.toString()}`}>
                 <div className='flex justify-between items-center'>
                     <div className=''>

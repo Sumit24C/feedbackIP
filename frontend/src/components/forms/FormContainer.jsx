@@ -18,6 +18,8 @@ import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function FormContainer({
     form_id,
+    submitAction,
+    setSubmitAction,
     formType,
     setFormType,
     selectedClasses,
@@ -28,12 +30,9 @@ function FormContainer({
     const navigate = useNavigate();
     const axiosPrivate = useAxiosPrivate();
     const { userData } = useSelector((state) => state.auth);
-
     const [questions, setQuestions] = useState([]);
     const [newQuestion, setNewQuestion] = useState("");
     const [loadingForm, setLoadingForm] = useState(false);
-    const [submitAction, setSubmitAction] = useState("create");
-
     const today = new Date().toISOString().split("T")[0];
     const {
         register,
@@ -85,7 +84,7 @@ function FormContainer({
             }
         })();
 
-    }, [form_id, reset]);
+    }, [form_id, reset, submitAction]);
 
     const addQuestion = () => {
         if (!newQuestion.trim()) {
@@ -164,16 +163,8 @@ function FormContainer({
     const maxRating = watch("ratingMax");
     const minRating = watch("ratingMin");
 
-    if (loadingForm) {
-        return (
-            <div className="flex justify-center py-8">
-                <div className="w-6 h-6 border-2 border-transparent border-t-blue-500 border-l-blue-400 rounded-full animate-spin" />
-            </div>
-        )
-    }
-
     return (
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-4">
+        <div className="grid md:grid-cols-[1fr_1fr] gap-4">
             <form
                 className="bg-white rounded-2xl shadow-lg p-5 space-y-5"
                 onSubmit={handleSubmit((data) => onSubmit(data, submitAction))}
@@ -191,7 +182,7 @@ function FormContainer({
 
                 <div>
                     <label className="text-sm font-medium">Form Type</label>
-                    <Select disabled={form_id} value={formType} onValueChange={setFormType}>
+                    <Select disabled={form_id && submitAction==="update"} value={formType} onValueChange={setFormType}>
                         <SelectTrigger className="w-full mt-1">
                             <SelectValue placeholder="Select form type" />
                         </SelectTrigger>
@@ -297,33 +288,42 @@ function FormContainer({
                     </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 items-end">
+                    {form_id && (
+                        <div className="w-40">
+                            <Select value={submitAction} onValueChange={setSubmitAction}>
+                                <SelectTrigger className="w-full mt-1">
+                                    <SelectValue placeholder="action" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>select action</SelectLabel>
+                                        <SelectItem value="recreate">recreate</SelectItem>
+                                        <SelectItem value="update">update</SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        onClick={() => setSubmitAction("create")}
-                        className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold"
+                        className="flex-1 py-2 rounded-xl
+                            bg-blue-600 text-white font-semibold
+                            flex items-center justify-center
+                            disabled:opacity-60"
                     >
                         {isSubmitting ? (
-                            <Loader2 className="animate-spin mx-auto" />
-                        ) : form_id ? "Recreate Form" : "Create Form"}
+                            <Loader2 className="animate-spin" />
+                        ) : (
+                            submitAction === "update"
+                                ? "submit"
+                                : "Create Form"
+                        )}
                     </button>
-
-                    {form_id && (
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            onClick={() => setSubmitAction("update")}
-                            className="flex-1 py-3 rounded-xl border border-blue-600 text-blue-600 font-semibold"
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className="animate-spin mx-auto" />
-                            ) : (
-                                "Update Form"
-                            )}
-                        </button>
-                    )}
                 </div>
+
             </form>
 
             <div className="bg-white rounded-2xl shadow-lg p-4 h-[520px] overflow-y-auto">

@@ -35,8 +35,8 @@ function AttendanceDashboard() {
     }
 
     return (
-        <div>
-            <div className='flex flex-col items-center p-10'>
+        <div className=''>
+            <div className='flex flex-col justify-center items-center px-10 py-4'>
                 {attendanceRecords.length > 0 &&
                     attendanceRecords.map((attendance) => (
                         <AttendanceCard key={attendance.facultySubject.toString()} attendance={attendance} />

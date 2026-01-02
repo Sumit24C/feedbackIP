@@ -25,7 +25,6 @@ function AttendanceControls({
   return (
     <Card className="mb-4 p-4">
       <CardContent className="flex flex-wrap items-center justify-between gap-3 p-0 sm:p-3">
-        {/* Left side: date, time, actions */}
         <div className="flex flex-wrap items-center gap-2">
           <Input
             type="date"
@@ -96,7 +95,6 @@ function AttendanceControls({
           )}
         </div>
 
-        {/* Right side: pagination */}
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -114,7 +112,7 @@ function AttendanceControls({
           <Button
             size="sm"
             variant="outline"
-            disabled={page === totalPages}
+            disabled={page === totalPages || totalPages === 0}
             onClick={() => setPage((p) => p + 1)}
           >
             Next
