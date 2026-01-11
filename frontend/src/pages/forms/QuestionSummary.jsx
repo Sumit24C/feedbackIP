@@ -16,7 +16,7 @@ import { extractErrorMsg } from "@/utils/extractErrorMsg";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const QuestionSummary = () => {
-  const { form_id, subjectId, formType } = useParams();
+  const { form_id, _id, formType } = useParams();
   const axios = useAxiosPrivate();
 
   const [graphData, setGraphData] = useState([]);
@@ -24,23 +24,16 @@ const QuestionSummary = () => {
   const [tab, setTab] = useState("chart");
 
   useEffect(() => {
-    fetchQuestionData();
-  }, [subjectId, form_id]);
+    ; (async function () {
+      await fetchQuestionData();
+    })();
+  }, [_id, form_id, formType]);
 
   const fetchQuestionData = async () => {
     setLoading(true);
-    setLoading(true);
     try {
-      let url = "";
-      if (formType === "infrastructure") {
-        const classYear = subjectId.split('_')[0];
-        const classSection = subjectId.split('_')[1];
-        url = `/faculty/class/${form_id}/${classSection}/${classYear}`
-      } else {
-        url = `/faculty/subject/${form_id}/${subjectId}`
-      }
-
-      const res = await axios.get(url);
+      const entity = formType === "infrastructure" ? "class" : "subject";
+      const res = await axios.get(`/faculty/${entity}/${form_id}/${_id}`);
       setGraphData(res.data.data);
     } catch (error) {
       toast.error(extractErrorMsg(error) || "Failed to fetch summary");

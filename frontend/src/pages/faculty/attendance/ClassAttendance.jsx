@@ -2,10 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
-
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import AttendanceTable from "@/components/attendance/AttendanceTable";
 import AttendanceControls from "@/components/attendance/AttendanceControls";
 
@@ -61,6 +57,18 @@ function ClassAttendance() {
     }
   }
 
+  const fetchAttendanceSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const res = await api.get(`/attendance/faculty/student/summary/${id}`);
+      setAttendanceSummary(res.data.data);
+    } catch (error) {
+      setErrMsg(extractErrorMsg(error));
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
   useEffect(() => {
     (async function () {
       await fetchAttendance(page);
@@ -69,17 +77,9 @@ function ClassAttendance() {
 
   useEffect(() => {
     (async () => {
-      setSummaryLoading(true);
-      try {
-        const res = await api.get(`/attendance/faculty/student/summary/${id}`);
-        setAttendanceSummary(res.data.data);
-      } catch (error) {
-        setErrMsg(extractErrorMsg(error));
-      } finally {
-        setSummaryLoading(false);
-      }
-    })()
-  }, []);
+      await fetchAttendanceSummary();
+    })();
+  }, [id]);
 
   const attendancePercentMap = useMemo(() => {
     return Object.fromEntries(
@@ -114,6 +114,7 @@ function ClassAttendance() {
       await api.post(`/attendance/faculty/student/${id}`, payload);
 
       await fetchAttendance(1);
+      await fetchAttendanceSummary();
       setIsCreating(false);
       setAttendanceTime("");
     } catch (error) {
@@ -165,7 +166,8 @@ function ClassAttendance() {
     setDeleteLoading(true);
     try {
       await api.delete(`/attendance/faculty/a/${sessionId}`);
-      await fetchAttendance(page);
+      await fetchAttendance(1);
+      await fetchAttendanceSummary();
     } catch (error) {
       alert(extractErrorMsg(error));
     } finally {
@@ -189,6 +191,7 @@ function ClassAttendance() {
       setEditingSessionId(null);
       setEditableSession(null);
       await fetchAttendance(page);
+      await fetchAttendanceSummary();
     } catch (error) {
       alert(extractErrorMsg(error));
     }
@@ -207,75 +210,90 @@ function ClassAttendance() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-4">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold tracking-tight">
-          {facultySubject.subject.name}
-        </h2>
+    <div className="h-[calc(100vh-64px)] px-4 py-4 flex flex-col">
+      <div className="mb-6 rounded-lg border bg-background p-2 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {facultySubject.subject}
+            </h2>
 
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            Class Attendance
-          </span>
-          <span>•</span>
-          <span>{facultySubject.classSection}</span>
-          <span>•</span>
-          <span>{facultySubject.classYear}</span>
-          <span>•</span>
-          <span className="capitalize">{facultySubject.formType}</span>
+            <div className="mt-2 flex flex-wrap gap-2 text-sm">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                Class Attendance
+              </span>
+
+              <span className="rounded-full bg-muted px-2 py-0.5">
+                {facultySubject.formType === "theory"
+                  ? facultySubject?.class_name
+                  : facultySubject?.batch_code}
+              </span>
+
+              <span className="rounded-full bg-muted px-2 py-0.5">
+                {facultySubject?.class_year}
+              </span>
+
+              <span className="rounded-full bg-muted px-2 py-0.5 capitalize">
+                {facultySubject.formType}
+              </span>
+            </div>
+          </div>
+
+          <AttendanceControls
+            attendanceDate={attendanceDate}
+            setAttendanceDate={setAttendanceDate}
+            attendanceTime={attendanceTime}
+            setAttendanceTime={setAttendanceTime}
+
+            isCreating={isCreating}
+            submitLoading={submitLoading}
+            editingSessionId={editingSessionId}
+
+            onCreate={handleCreateAttendance}
+            onSubmit={submitAttendance}
+            onUpdate={handleUpdateSession}
+            onCancelCreate={() => setIsCreating(false)}
+            onCancelEdit={() => {
+              setEditingSessionId(null);
+              setEditableSession(null);
+            }}
+
+            page={page}
+            totalPages={totalPages}
+            setPage={setPage}
+          />
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden min-h-0">
+        <div
+          className={`grid h-full min-h-0 gap-6 ${studentChunks.length > 1
+            ? "grid-cols-1 sm:grid-cols-2"
+            : "grid-cols-1"
+            }`}
+        >
+          {studentChunks.map((students, idx) => (
+            <div key={idx} className="sm:h-full min-h-100 sm:min-h-0">
+              <AttendanceTable
+                students={students}
+                attendancePercentMap={attendancePercentMap}
+                isCreating={isCreating}
+                attendanceDate={attendanceDate}
+                attendanceTime={attendanceTime}
+                newAttendance={newAttendance}
+                toggleAttendance={toggleAttendance}
+                latestDates={latestDates}
+                editingSessionId={editingSessionId}
+                editableSession={editableSession}
+                setEditableSession={setEditableSession}
+                startUpdateSession={startUpdateSession}
+                handleDeleteSession={handleDeleteSession}
+                deleteLoading={deleteLoading}
+              />
+            </div>
+          ))}
         </div>
       </div>
 
-      <AttendanceControls
-        attendanceDate={attendanceDate}
-        setAttendanceDate={setAttendanceDate}
-        attendanceTime={attendanceTime}
-        setAttendanceTime={setAttendanceTime}
-
-        isCreating={isCreating}
-        submitLoading={submitLoading}
-        editingSessionId={editingSessionId}
-
-        onCreate={handleCreateAttendance}
-        onSubmit={submitAttendance}
-        onUpdate={handleUpdateSession}
-        onCancelCreate={() => setIsCreating(false)}
-        onCancelEdit={() => {
-          setEditingSessionId(null);
-          setEditableSession(null);
-        }}
-
-        page={page}
-        totalPages={totalPages}
-        setPage={setPage}
-      />
-
-      <div
-        className={`grid gap-6 ${studentChunks.length > 1
-          ? "grid-cols-1 lg:grid-cols-2"
-          : "grid-cols-1"
-          }`}
-      >
-        {studentChunks.map((students, idx) => (
-          <AttendanceTable
-            key={idx}
-            students={students}
-            attendancePercentMap={attendancePercentMap}
-            isCreating={isCreating}
-            attendanceDate={attendanceDate}
-            attendanceTime={attendanceTime}
-            newAttendance={newAttendance}
-            toggleAttendance={toggleAttendance}
-            latestDates={latestDates}
-            editingSessionId={editingSessionId}
-            editableSession={editableSession}
-            setEditableSession={setEditableSession}
-            startUpdateSession={startUpdateSession}
-            handleDeleteSession={handleDeleteSession}
-            deleteLoading={deleteLoading}
-          />
-        ))}
-      </div>
     </div >
   );
 }

@@ -1,11 +1,11 @@
 import { memo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-function ClassCard({ fs, formId, formType }) {
+function ClassCard({ en, formId, formType }) {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const path = `/faculty/feedback/${formType}/${formId}/subject/${fs._id}`;
+    const path = `/faculty/feedback/${formType}/${formId}/entity/${en._id}`;
     const active = location.pathname === path;
 
     if (formType === "infrastructure") {
@@ -22,15 +22,12 @@ function ClassCard({ fs, formId, formType }) {
             >
                 <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-gray-800 truncate">
-                        {fs.classYear} · {fs.classSection}
+                        {en.class_year} · {en.class_name}
                     </p>
-                    <span className="shrink-0 px-2 py-0.5 rounded-xs bg-gray-100 text-gray-700">
-                        {fs.formType}
-                    </span>
                 </div>
 
                 <p className="text-xs text-gray-500 mt-0.5">
-                    {fs?.totalResponses || 0} responses
+                    {en?.totalResponses || 0} responses
                 </p>
             </div>
         );
@@ -48,16 +45,11 @@ function ClassCard({ fs, formId, formType }) {
             >
                 <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-gray-800 truncate">
-                        {fs.subject.name} · {fs.classSection}
+                        {en.subject} · {en.class_year} · {en.batch_code || en.class_name}
                     </p>
-
-                    <span className="shrink-0 px-2 py-0.5 rounded-xs bg-gray-100 text-gray-700">
-                        {fs.formType}
-                    </span>
                 </div>
-
                 <p className="text-xs text-gray-500 mt-0.5">
-                    {fs.totalResponses} responses
+                    {en.totalResponses} responses
                 </p>
             </div>
         );

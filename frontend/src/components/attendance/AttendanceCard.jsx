@@ -11,12 +11,19 @@ function AttendanceCard({ attendance }) {
                             <span>{attendance.subject}</span>
                         </div>
                         <div className='text-gray-700'>
-                            <span>{attendance.formType}</span> . <span>{attendance.classSection}</span>
+                            <div className='flex space-x-2 items-center'>
+                                <span>{attendance.formType}</span>
+                                {attendance.formType === "theory" ? (
+                                    <span>{attendance.class_name}</span>
+                                ) : (
+                                    <span>{attendance.batch_code}</span>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div>
                         <span className='bg-white border-gray-400 rounded-full shadow-2xl p-4 text-center font-bold border-1'>
-                            {attendance.classYear}
+                            {attendance.class_year}
                         </span>
                     </div>
                 </div>

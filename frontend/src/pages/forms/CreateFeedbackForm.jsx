@@ -14,7 +14,7 @@ function CreateFeedbackForm() {
   const [targetType, setTargetType] = useState(userData?.role === "admin" ? "INSTITUTE" : "CLASS");
 
   return (
-    <div className="flex justify-center items-center m-10">
+    <div className="flex justify-center items-center m-5">
       <div className="mx-auto max-w-screen grid grid-rows-[1fr] sm:grid-cols-[1fr_3fr] justify-around gap-6">
         <FacultySubjectSelector
           form_id={form_id}

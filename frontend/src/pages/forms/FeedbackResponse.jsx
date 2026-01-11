@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
 import ClassCard from "@/components/forms/ClassCard";
+import { toast } from "sonner";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 const FeedbackResponse = () => {
-  const [facultySubjects, setFacultySubjects] = useState([]);
+  const [entities, setEntities] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const api = useAxiosPrivate();
@@ -12,19 +14,20 @@ const FeedbackResponse = () => {
   const location = useLocation();
   const { formType, form_id } = useParams();
   useEffect(() => {
-    const fetchFacultySubjects = async () => {
+    const fetchEntities = async () => {
       try {
         const url = formType === "infrastructure" ? `/faculty/class/${form_id}` : `/faculty/${form_id}`;
         const res = await api.get(url);
-        setFacultySubjects(res.data.data || []);
+        setEntities(res.data.data || []);
       } catch (error) {
         console.error("Failed to fetch faculty subjects", error);
+        toast.error(extractErrorMsg(error));
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFacultySubjects();
+    fetchEntities();
   }, [form_id]);
 
   const isOverallActive =
@@ -35,9 +38,14 @@ const FeedbackResponse = () => {
       <aside className="w-full lg:w-80">
         <div className="sticky top-20 space-y-4">
           <div className="bg-white rounded-2xl border shadow-sm p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800">
-              Feedback Responses
-            </h3>
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-semibold text-gray-800">
+                Feedback Responses
+              </h3>
+              <h3 className="text-sm font-semibold text-gray-800 p-2 bg-gray-100 rounded-xl">
+                {formType.toUpperCase()}
+              </h3>
+            </div>
 
             <button
               onClick={() => navigate(`/faculty/feedback/${formType}/${form_id}`)}
@@ -61,12 +69,12 @@ const FeedbackResponse = () => {
                 <div className="flex justify-center py-6">
                   <div className="w-5 h-5 border-2 border-transparent border-t-blue-500 border-l-blue-400 rounded-full animate-spin" />
                 </div>
-              ) : facultySubjects.length > 0 ? (
+              ) : entities.length > 0 ? (
                 <div className="max-h-[60vh] overflow-y-auto space-y-1 pr-1">
-                  {facultySubjects.map((fs) => (
+                  {entities.map((en) => (
                     <ClassCard
-                      key={fs._id}
-                      fs={fs}
+                      key={en._id}
+                      en={en}
                       formId={form_id}
                       formType={formType}
                     />

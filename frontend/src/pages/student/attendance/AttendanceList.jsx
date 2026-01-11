@@ -29,9 +29,15 @@ function AttendanceList() {
   }, []);
 
   const stats = useMemo(() => {
-    if (!attendance.length) return null;
+    if (!attendance.length) {
+      return {
+        avg: 0,
+        totalSubjects: 0,
+        lowCount: 0
+      }
+    }
 
-    const totalSubjects = attendance.length;
+    const totalSubjects = attendance?.length;
     const avg =
       attendance.reduce((sum, a) => sum + a.totalPercentage, 0) /
       totalSubjects;

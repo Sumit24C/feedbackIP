@@ -62,14 +62,13 @@ export default function CreateDepartment() {
 
   const [deptName, setDeptName] = useState("");
   const [deptCode, setDeptCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [studentFile, setStudentFile] = useState(null);
+  const [classFile, setClassFile] = useState(null);
   const [facultyFile, setFacultyFile] = useState(null);
   const [subjectFile, setSubjectFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!deptName || !deptCode || !password || !studentFile || !facultyFile || !subjectFile) {
+    if (!deptName || !deptCode || !classFile || !facultyFile || !subjectFile) {
       toast.error("All fields are required");
       return;
     }
@@ -80,8 +79,7 @@ export default function CreateDepartment() {
       const form = new FormData();
       form.append("dept_name", deptName);
       form.append("dept_code", deptCode);
-      form.append("password", password);
-      form.append("students", studentFile);
+      form.append("classess", classFile);
       form.append("faculties", facultyFile);
       form.append("subjects", subjectFile);
 
@@ -112,13 +110,11 @@ export default function CreateDepartment() {
             Create Department
           </CardTitle>
           <CardDescription>
-            Set up a new department with students, faculty, and subjects
+            Set up a new department with faculty, class and subjects
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
-
-          {/* Department Info */}
           <div className="space-y-4">
             <Input
               placeholder="Department Name (e.g Computer Engineering)"
@@ -130,20 +126,12 @@ export default function CreateDepartment() {
               value={deptCode}
               onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
             />
-            <Input
-              type="password"
-              placeholder="Department Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
           </div>
-
-          {/* Uploads */}
           <div className="space-y-5 pt-2">
             <FileUpload
-              label="Upload Students Excel"
-              file={studentFile}
-              setFile={setStudentFile}
+              label="Upload Class Excel"
+              file={classFile}
+              setFile={setClassFile}
             />
             <FileUpload
               label="Upload Faculty Excel"

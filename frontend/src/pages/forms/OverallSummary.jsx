@@ -19,7 +19,7 @@ const OverallSummary = () => {
   const [graphData, setGraphData] = useState([]);
   const [loading, setLoading] = useState(false);
   const axios = useAxiosPrivate();
-  const { form_id } = useParams();
+  const { form_id, formType } = useParams();
 
   useEffect(() => {
     (async function () {
@@ -36,7 +36,11 @@ const OverallSummary = () => {
     })();
   }, [form_id]);
 
-  const labels = graphData?.map((item) => `${item.classSection + "-" + item.classYear}`);
+  const labels = graphData?.map((item) => (
+    (formType === "theory" || formType === "infrastructure")
+      ? `${item.class_year + "-" + item.class_name}`
+      : `${item.class_year + "-" + item.batch_code}`));
+
   const avgRatings = graphData?.map((item) => Number(item.avgRating) || 0);
   const totalResponses = graphData.map(
     (item) => Number(item.totalResponses) || 0

@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { toast } from "sonner";
-import AttendanceList from "./AttendanceList";
 import Attendance from "@/components/attendance/Attendance";
 
 function SubjectAttendancePage() {
@@ -51,8 +50,7 @@ function SubjectAttendancePage() {
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold">{meta.subject}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {meta.formType.toUpperCase()} • {meta.faculty.facultyName} (
-            {meta.faculty.facultyEmail})
+            {meta.formType.toUpperCase()} • {meta.facultyName}
           </p>
         </div>
 

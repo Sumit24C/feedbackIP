@@ -27,7 +27,7 @@ function FacultySubjectSelector({
                 const res = await axiosPrivate.get(url);
                 if (userData?.role === "faculty") {
                     const classes = res.data.data;
-                    setYears([...new Set(classes.map(c => c.classYear))]);
+                    setYears([...new Set(classes.map(c => c.class_year))]);
                 }
                 setData(res.data.data);
             } catch (error) {
@@ -49,7 +49,7 @@ function FacultySubjectSelector({
 
     const toggleYearSelection = (year) => {
         const yearIds = filteredData
-            .filter((d) => d.classYear === year)
+            .filter((d) => d.class_year === year)
             .map((d) => d._id);
 
         const allSelected = yearIds.every((id) => selectedClasses.includes(id));
@@ -153,7 +153,6 @@ function FacultySubjectSelector({
                                 {filteredData.length > 0 ? (
                                     filteredData.map((item) => {
                                         const isChecked = selectedClasses.includes(item._id);
-
                                         return (
                                             <div
                                                 key={item._id}
@@ -169,14 +168,14 @@ function FacultySubjectSelector({
                                                 <div className="flex-1 text-sm">
                                                     <div className="flex items-start justify-between gap-2">
                                                         <p className="font-medium text-gray-800">
-                                                            {item.classYear} - {item.classDepartment.code} - {item.classSection}
+                                                            {item.class_year} - {item.department} - {item.formType === "theory" ? item.class_name : item.batch_code}
                                                         </p>
                                                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
                                                             {item.formType}
                                                         </span>
                                                     </div>
                                                     <p className="text-xs text-gray-500 mt-0.5">
-                                                        {item.subject?.name}
+                                                        {item.subject}
                                                     </p>
                                                 </div>
                                             </div>

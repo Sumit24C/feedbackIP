@@ -8,9 +8,9 @@ import {
     NotFound
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
-import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject } from './pages/admin'
+import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject, StudentTab, FacultyTab, SubjectTab, ClassTab } from './pages/admin'
 import { AttendanceList, FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage, SubjectAttendance } from './pages/student'
-import { FacultyProfilePage, CreateAttendance, ClassAttendance, AttendanceDashboard } from './pages/faculty'
+import { FacultyProfilePage, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse } from './pages/forms'
 import NoAccess from './pages/NoAccess'
 
@@ -27,7 +27,12 @@ function AppRouter() {
                             <Route path='create-department' element={<CreateDepartment />} />
                             <Route path='department' element={<DepartmentList />} />
                             <Route path='faculty-subject' element={<UploadFacultySubject />} />
-                            <Route path='department/:dept_id' element={<Department />} />
+                            <Route path="/admin/department/:dept_id" element={<Department />}>
+                                <Route index element={<StudentTab />} />
+                                <Route path="faculties" element={<FacultyTab />} />
+                                <Route path="subjects" element={<SubjectTab />} />
+                                <Route path="classess" element={<ClassTab />} />
+                            </Route>
                         </Route>
 
                         {/* Student routes */}
@@ -47,12 +52,11 @@ function AppRouter() {
                             <Route path="form/:form_id" element={<CreateFeedbackForm />} />
                             <Route path='feedback/:formType/:form_id' element={<FeedbackResponse />} >
                                 <Route index element={<OverallSummary />} />
-                                <Route path="subject/:subjectId" element={<QuestionSummary />} />
+                                <Route path="entity/:_id" element={<QuestionSummary />} />
                             </Route>
                             <Route path="all-forms" element={<AllForms />} />
                             <Route path='view-attendance' element={<AttendanceDashboard />} />
                             <Route path='class-attendance/:id' element={<ClassAttendance />} />
-                            <Route path='create-attendance/:id' element={<CreateAttendance />} />
                         </Route>
                         <Route path="unauthorized" element={<UnAuthorized />} />
                     </Route>

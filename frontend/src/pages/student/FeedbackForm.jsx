@@ -9,7 +9,7 @@ function FeedbackForm() {
   const api = useAxiosPrivate();
 
   const [formData, setFormData] = useState(null);
-  const [facultySubjectResponse, setFacultySubjectResponse] = useState([]);
+  const [studentResponses, setStudentResponses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -30,7 +30,7 @@ function FeedbackForm() {
   }, []);
 
   const handleRating = (fsId, qId, val) => {
-    setFacultySubjectResponse((prev) => {
+    setStudentResponses((prev) => {
       const fsIndex = prev.findIndex((p) => p._id === fsId);
 
       if (fsIndex === -1) {
@@ -70,7 +70,7 @@ function FeedbackForm() {
     setSubmitLoading(true);
     try {
       const url = `/student/${form_id}`;
-      await api.post(url, facultySubjectResponse);
+      await api.post(url, studentResponses);
       alert("Feedback submitted successfully");
       navigate("/student/forms");
     } catch {
@@ -93,7 +93,7 @@ function FeedbackForm() {
     return <p className="text-red-500 text-center mt-10">{errMsg}</p>;
   }
 
-  const isComplete = facultySubjectResponse?.length === formData.facultySubjects?.length && facultySubjectResponse?.every(fs =>
+  const isComplete = studentResponses?.length === formData.entities?.length && studentResponses?.every(fs =>
     fs.ratings.length === formData.questions?.length
   );
 
@@ -131,18 +131,18 @@ function FeedbackForm() {
         </div>
 
         <div className="space-y-8">
-          {formData.facultySubjects?.map((fs) => (
+          {formData.entities?.map((en) => (
             <div
-              key={fs._id}
+              key={en._id}
               className="bg-gray-50 rounded-xl border p-4 sm:p-6 space-y-4"
             >
               {formData.formType !== "infrastructure" && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">
-                    {fs.subject.name}
+                    {en.subject}
                   </h3>
                   <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full inline-block mt-1">
-                    Faculty: {fs.facultyName}
+                    Faculty: {en.facultyName}
                   </span>
                 </div>
               )}
@@ -157,23 +157,15 @@ function FeedbackForm() {
                     <span className="ml-1 text-red-500">*</span>
                   </p>
 
-                  <select
-                    defaultValue=""
-                    onChange={(e) =>
-                      handleRating(
-                        fs._id,
-                        q.questionId,
-                        Number(e.target.value)
-                      )
-                    }
-                    required
-                    aria-required="true"
-                    className="w-auto border rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <div
+                    className="
+                      flex gap-3
+                      overflow-x-auto
+                      whitespace-nowrap
+                      scrollbar-hide
+                      py-2
+                    "
                   >
-                    <option value="" disabled>
-                      Select rating
-                    </option>
-
                     {Array.from(
                       {
                         length:
@@ -183,11 +175,35 @@ function FeedbackForm() {
                       },
                       (_, i) => formData.ratingConfig.min + i
                     ).map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
+                      <label key={v} className="inline-block">
+                        <input
+                          type="radio"
+                          name={`${en._id}-${q.questionId}`}
+                          value={v}
+                          onChange={() =>
+                            handleRating(en._id, q.questionId, v)
+                          }
+                          className="peer hidden"
+                          required
+                        />
+
+                        <div
+                          className="
+                              min-w-[48px] h-12
+                              flex items-center justify-center
+                              rounded-xl border
+                              text-sm font-semibold
+                              transition
+                              peer-checked:bg-blue-600
+                              peer-checked:text-white
+                              peer-checked:border-blue-600
+                              hover:border-blue-400"
+                        >
+                          {v}
+                        </div>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
               ))}
             </div>

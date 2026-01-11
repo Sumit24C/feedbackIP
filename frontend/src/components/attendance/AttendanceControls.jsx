@@ -23,7 +23,7 @@ function AttendanceControls({
   setPage,
 }) {
   return (
-    <Card className="mb-4 p-4">
+    <Card className="mb-4 p-2 sm:p-0">
       <CardContent className="flex flex-wrap items-center justify-between gap-3 p-0 sm:p-3">
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -31,6 +31,7 @@ function AttendanceControls({
             value={attendanceDate}
             onChange={(e) => setAttendanceDate(e.target.value)}
             className="w-[120px] h-9"
+            max={new Date().toISOString().split("T")[0]}
           />
 
           <Input

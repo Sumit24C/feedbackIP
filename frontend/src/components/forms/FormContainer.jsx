@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import {  useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useSelector } from "react-redux";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
+import QuestionActions from "./QuestionActions";
 
 function FormContainer({
     form_id,
@@ -164,7 +165,7 @@ function FormContainer({
     const minRating = watch("ratingMin");
 
     return (
-        <div className="grid md:grid-cols-[1fr_1fr] gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <form
                 className="bg-white rounded-2xl shadow-lg p-5 space-y-5"
                 onSubmit={handleSubmit((data) => onSubmit(data, submitAction))}
@@ -182,7 +183,7 @@ function FormContainer({
 
                 <div>
                     <label className="text-sm font-medium">Form Type</label>
-                    <Select disabled={form_id && submitAction==="update"} value={formType} onValueChange={setFormType}>
+                    <Select disabled={form_id && submitAction === "update"} value={formType} onValueChange={setFormType}>
                         <SelectTrigger className="w-full mt-1">
                             <SelectValue placeholder="Select form type" />
                         </SelectTrigger>
@@ -260,88 +261,50 @@ function FormContainer({
                     </div>
                 </div>
 
-                <div className="border rounded-xl p-4">
-                    <label className="text-sm font-medium">Add Question</label>
-                    <div className="flex gap-2 mt-1">
-                        <input
-                            value={newQuestion}
-                            onChange={(e) => setNewQuestion(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    if (!newQuestion.trim()) {
-                                        return toast.error("Empty question cannot be added");
-                                    }
-                                    addQuestion();
-                                }
-                            }}
-                            className="flex-1 border rounded-lg px-3 py-2"
-                        />
-
-                        <button
-                            type="button"
-                            onClick={addQuestion}
-                            className="bg-blue-600 text-white rounded-lg px-3"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
+                <div className="hidden md:block">
+                    <QuestionActions
+                        newQuestion={newQuestion}
+                        setNewQuestion={setNewQuestion}
+                        addQuestion={addQuestion}
+                        isSubmitting={isSubmitting}
+                        submitAction={submitAction}
+                        setSubmitAction={setSubmitAction}
+                        form_id={form_id}
+                    />
                 </div>
-
-                <div className="flex gap-3 items-end">
-                    {form_id && (
-                        <div className="w-40">
-                            <Select value={submitAction} onValueChange={setSubmitAction}>
-                                <SelectTrigger className="w-full mt-1">
-                                    <SelectValue placeholder="action" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>select action</SelectLabel>
-                                        <SelectItem value="recreate">recreate</SelectItem>
-                                        <SelectItem value="update">update</SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="flex-1 py-2 rounded-xl
-                            bg-blue-600 text-white font-semibold
-                            flex items-center justify-center
-                            disabled:opacity-60"
-                    >
-                        {isSubmitting ? (
-                            <Loader2 className="animate-spin" />
-                        ) : (
-                            submitAction === "update"
-                                ? "submit"
-                                : "Create Form"
-                        )}
-                    </button>
-                </div>
-
             </form>
-
-            <div className="bg-white rounded-2xl shadow-lg p-4 h-[520px] overflow-y-auto">
-                <p className="text-gray-600 p-2">Questions List</p>
-                {questions.map((q, i) => (
-                    <div
-                        key={i}
-                        className="flex justify-between items-center border rounded-lg px-3 py-2 mb-2"
-                    >
-                        <p className="text-sm">{i + 1}. {q.questionText}</p>
-                        <button
-                            onClick={() => removeQuestion(i)}
-                            className="text-red-500"
+            <div className="bg-white rounded-2xl shadow-lg p-4 flex flex-col h-[70vh] md:h-[520px] overflow-hidden">
+                <p className="text-gray-600 p-2 font-medium">Questions List</p>
+                <div className="flex-1 overflow-y-auto space-y-2">
+                    {questions.map((q, i) => (
+                        <div
+                            key={i}
+                            className="flex justify-between items-center border rounded-lg px-3 py-2 w-full min-w-0"
                         >
-                            <Trash2 size={14} />
-                        </button>
-                    </div>
-                ))}
+                            <p className="text-sm">
+                                {i + 1}. {q.questionText}
+                            </p>
+                            <button
+                                onClick={() => removeQuestion(i)}
+                                className="text-red-500"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+                <div className="md:hidden mt-4">
+                    <QuestionActions
+                        newQuestion={newQuestion}
+                        setNewQuestion={setNewQuestion}
+                        addQuestion={addQuestion}
+                        isSubmitting={isSubmitting}
+                        submitAction={submitAction}
+                        setSubmitAction={setSubmitAction}
+                        form_id={form_id}
+                        onSubmit={handleSubmit((data) => onSubmit(data, submitAction))}
+                    />
+                </div>
             </div>
         </div>
     );

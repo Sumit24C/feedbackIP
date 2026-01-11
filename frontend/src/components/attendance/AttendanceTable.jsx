@@ -36,10 +36,10 @@ function AttendanceTable({
 
 
     return (
-        <Card className="p-0">
-            <CardContent className="p-0 overflow-x-auto">
-                <Table>
-                    <TableHeader>
+        <Card className="h-full p-0">
+            <CardContent className="p-0 h-full overflow-y-auto overflow-x-auto">
+                <Table className="table-fixed">
+                    <TableHeader className="sticky top-0 bg-blue-100 z-10">
                         <TableRow>
                             <TableHead className="w-[70px] text-center">Roll</TableHead>
 
@@ -79,7 +79,7 @@ function AttendanceTable({
                                                     date: new Date(e.target.value).toISOString(),
                                                 }))
                                             }
-                                            className="h-8 max-w-1/3"
+                                            className="h-8 max-w-1/2 sm:max-w-3/4"
                                         />
                                     ) : (
                                         <DropdownMenu>
