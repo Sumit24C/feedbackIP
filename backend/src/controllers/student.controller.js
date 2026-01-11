@@ -6,7 +6,7 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
-import { getClassSection, getStudentYear } from "../utils/student.utils.js"
+import { getClassSection, getStudentYear, resolveBatchCodes, resolveBatchCodeByType } from "../utils/student.utils.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id, fs_id } = req.params;
@@ -19,7 +19,10 @@ export const getFormById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Form not found");
     };
 
-    const student = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
+    const student = await Student
+        .findOne({ user_id: req.user._id })
+        .populate("dept", "name")
+        .populate("class_id", "batches");
 
     if (!student) {
         throw new ApiError(404, "Student not found");
@@ -29,9 +32,6 @@ export const getFormById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
-    const studentClassSection = getClassSection(student, form.formType);
-    const baseSection = student.classSection;
-    const studentYear = getStudentYear(student.academic_year);
     const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });
     if (existingResponse) {
         throw new ApiError(409, "Response already submitted");
@@ -57,86 +57,30 @@ export const getFormById = asyncHandler(async (req, res) => {
     };
 
     if (form.formType === "infrastructure") {
-        payload.facultySubjects = [student.dept?._id];
+        payload.entities = [{
+            _id: student.dept._id
+        }];
         return res.status(200).json(
             new ApiResponse(200, payload, "successfully fetched form")
         );
     }
 
-    let facultySubjects = [];
+    const query = {
+        class_id: student.class_id._id,
+        formType: form.formType,
+    };
+
+    if (form.formType !== "theory") {
+        query.batch_code = resolveBatchCodeByType(
+            student.class_id.batches,
+            student.roll_no,
+            form.formType
+        );
+    }
+
+    let entities = [];
     if (form.targetType === "DEPARTMENT") {
-        facultySubjects = await FacultySubject.aggregate([
-            {
-                $match: {
-                    classDepartment: student.dept?._id,
-                    classSection: studentClassSection.trim(),
-                    formType: form.formType,
-                    classYear: studentYear,
-                }
-            },
-            {
-                $lookup: {
-                    from: "subjects",
-                    localField: "subject",
-                    foreignField: "_id",
-                    as: "subject",
-                    pipeline: [
-                        {
-                            $project: {
-                                dept: 1,
-                                name: 1,
-                                subject_code: 1,
-                                type: 1,
-                            }
-                        }
-                    ]
-                }
-            },
-            { $unwind: "$subject" },
-            {
-                $lookup: {
-                    from: "faculties",
-                    localField: "faculty",
-                    foreignField: "_id",
-                    as: "facultyData",
-                    pipeline: [
-                        {
-                            $lookup: {
-                                from: "users",
-                                localField: "user_id",
-                                foreignField: "_id",
-                                as: "user",
-                                pipeline: [
-                                    {
-                                        $project: {
-                                            email: 1,
-                                            fullname: 1
-                                        }
-                                    },
-                                ]
-                            }
-                        }
-                    ]
-                }
-            },
-            { $unwind: "$facultyData" },
-            { $unwind: "$facultyData.user" },
-            {
-                $project: {
-                    facultyId: "$facultyData._id",
-                    facultyName: "$facultyData.user.fullname",
-                    subject: 1,
-                    classYear: 1,
-                    classSection: 1,
-                }
-            }
-        ]);
-    } else {
-        const fs = await FacultySubject.findOne({
-            classSection: { $in: [baseSection, student.classSection] },
-            classDepartment: student.dept?._id,
-            classYear: studentYear
-        })
+        const facultySubjects = await FacultySubject.find(query)
             .populate({
                 path: "faculty",
                 select: "_id user_id",
@@ -145,25 +89,50 @@ export const getFormById = asyncHandler(async (req, res) => {
                     select: "fullname"
                 }
             })
+            .populate("class_id", "name")
             .populate("subject")
-            .select("subject classSection classYear faculty")
+            .select("subject class_id faculty")
             .lean();
 
-        facultySubjects = [{
+        entities = facultySubjects.map((fs) => ({
+            _id: fs._id,
+            facultyId: fs.faculty?._id,
+            facultyName: fs.faculty?.user_id?.fullname,
+            subject: fs.subject.name,
+            batch_code: fs.batch_code,
+            class_name: fs.class_id.name,
+        }));
+
+    } else {
+        const fs = await FacultySubject.findById(fs_id)
+            .populate({
+                path: "faculty",
+                select: "_id user_id",
+                populate: {
+                    path: "user_id",
+                    select: "fullname"
+                }
+            })
+            .populate("class_id", "name")
+            .populate("subject")
+            .select("subject class_id faculty")
+            .lean();
+
+        entities = [{
             _id: fs_id,
             facultyId: fs.faculty?._id,
             facultyName: fs.faculty?.user_id?.fullname,
-            subject: fs.subject,
-            classYear: fs.classYear,
-            classSection: fs.classSection
+            subject: fs.subject.name,
+            batch_code: fs.batch_code,
+            class_name: fs.class_id.name,
         }];
     }
 
-    if (!facultySubjects || facultySubjects.length === 0) {
+    if (!entities || entities.length === 0) {
         throw new ApiError(500, "No faculty subjects found for this form");
     }
 
-    payload.facultySubjects = facultySubjects;
+    payload.entities = entities;
 
     return res.status(200).json(
         new ApiResponse(200, payload, "successfully fetched form")
@@ -172,22 +141,34 @@ export const getFormById = asyncHandler(async (req, res) => {
 
 export const getForms = asyncHandler(async (req, res) => {
 
-    const student = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
+    const student = await Student.findOne({ user_id: req.user._id }).populate("dept", "name").populate("class_id", "batches");
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
 
-    const baseSection = getClassSection(student);
-    const studentYear = getStudentYear(student.academic_year);
-    const studentFacultySubjects = await FacultySubject.find({
-        classSection: { $in: [baseSection, student.classSection] },
-        classDepartment: student.dept?._id,
-        classYear: studentYear
-    }).select("_id faculty").populate({
-        path: "faculty", select: "user_id", populate: {
-            path: "user_id", select: "fullname"
-        }
-    });
+    const batchMap = resolveBatchCodes(
+        student.class_id.batches,
+        student.roll_no
+    );
+
+    const query = {
+        class_id: student.class_id._id,
+        $or: [
+            { formType: "theory" },
+            ...batchMap,
+        ],
+    };
+
+    const studentFacultySubjects = await FacultySubject.find(query)
+        .select("_id faculty formType batch_code")
+        .populate({
+            path: "faculty",
+            select: "user_id",
+            populate: {
+                path: "user_id",
+                select: "fullname",
+            },
+        });
 
     const studentFacultySubjectIds = studentFacultySubjects.map((fs) => fs._id.toString());
     const forms = await Form.find({
@@ -259,7 +240,7 @@ export const getForms = asyncHandler(async (req, res) => {
 
 export const submitResponse = asyncHandler(async (req, res) => {
     const { form_id } = req.params;
-    const facultySubjectResponse = req.body;
+    const studentResponses = req.body;
     if (!form_id) {
         throw new ApiError(403, "Form Id is required");
     };
@@ -287,12 +268,12 @@ export const submitResponse = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Form is expired");
     };
 
-    const responseDocs = facultySubjectResponse.map((fs) => ({
+    const responseDocs = studentResponses.map((response) => ({
         dept: student.dept,
         form: form._id,
         student: student._id,
-        facultySubject: new mongoose.Types.ObjectId(fs._id),
-        ratings: fs.ratings,
+        facultySubject: new mongoose.Types.ObjectId(response._id),
+        ratings: response.ratings,
     }));
 
     const savedResponses = await Response.insertMany(responseDocs);

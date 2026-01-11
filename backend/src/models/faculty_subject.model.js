@@ -4,28 +4,27 @@ const facultySubjectSchema = new mongoose.Schema({
     faculty: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Faculty",
+        required: true
     },
     subject: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Subject"
-    },
-    classSection: {
-        type: String,
+        ref: "Subject",
         required: true
+    },
+    class_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ClassSection",
+        required: true
+    },
+    batch_code: {
+        type: String,
+        required: function () {
+            return this.formType !== "theory";
+        }
     },
     formType: {
         type: String,
         enum: ["theory", "practical", "tutorial"],
-        default: "theory"
-    },
-    classDepartment: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Department",
-        required: true
-    },
-    classYear: {
-        type: String,
-        enum: ["FY", "SY", "TY", "BY"],
         required: true
     }
 }, { timestamps: true });
@@ -34,10 +33,9 @@ facultySubjectSchema.index(
     {
         faculty: 1,
         subject: 1,
-        classDepartment: 1,
-        classYear: 1,
-        classSection: 1,
+        class_id: 1,
         formType: 1,
+        batch_code: 1,
     },
     { unique: true }
 );

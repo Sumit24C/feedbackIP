@@ -5,6 +5,7 @@ const studentSchema = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        unique: true,
     },
     dept: {
         type: mongoose.Schema.Types.ObjectId,
@@ -18,8 +19,9 @@ const studentSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    classSection: {
-        type: String,
+    class_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ClassSection",
         required: true,
     },
     electives: [

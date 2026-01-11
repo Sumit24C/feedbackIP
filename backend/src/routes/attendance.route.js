@@ -18,6 +18,7 @@ import {
 const router = Router();
 router.use(verifyJWT);
 
+//faculty
 router.route('/faculty').get(verifyRole("faculty"), getClassStudent);
 router.route('/faculty/student').get(verifyRole("faculty"), getStudentAttendanceByFacultyId);
 router.route('/faculty/a/:attendance_id').patch(verifyRole("faculty"), updateAttendance);
@@ -26,6 +27,7 @@ router.route('/faculty/student/:faculty_subject').post(verifyRole("faculty"), cr
 router.route('/faculty/student/class/:faculty_subject').get(verifyRole("faculty"), getStudentAttendanceByClass);
 router.route('/faculty/student/summary/:faculty_subject').get(verifyRole("faculty"), getAllStudentAttendanceCountByClass);
 
+//student
 router.route('/student').get(verifyRole("student"), getStudentAttendanceByStudentId);
 router.route('/student/:faculty_subject').get(verifyRole("student"), getStudentAttendanceBySubject);
 

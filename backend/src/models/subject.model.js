@@ -23,6 +23,11 @@ const subjectSchema = new mongoose.Schema({
         enum: ["dept", "elective"],
         required: true,
     },
+    semester: {
+        type: String,
+        enum: ["even", "odd"],
+        required: true
+    }
 }, { timestamps: true })
 
 const Subject = mongoose.model("Subject", subjectSchema);

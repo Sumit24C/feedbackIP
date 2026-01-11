@@ -15,8 +15,8 @@ router.use(verifyJWT, verifyRole("faculty"));
 router.route("/:form_id").get(getSubjectMapping);
 router.route("/class/:form_id").get(getDepartmentClass);
 
-router.route("/subject/:form_id/:facultySubjectId").get(getFeedbackResultBySubjects);
-router.route("/class/:form_id/:classSection/:classYear").get(getFeedbackResultByClass);
+router.route("/subject/:form_id/:fs_id").get(getFeedbackResultBySubjects);
+router.route("/class/:form_id/:class_id").get(getFeedbackResultByClass);
 
 router.route("/overall-result/:form_id").get(getOverallFeedbackResult);
 

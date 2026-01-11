@@ -21,9 +21,13 @@ const formSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "FacultySubject",
     }],
+    //this is used only if form is for whole department
     dept: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Department"
+        ref: "Department",
+        required: function () {
+            this.targetType !== "CLASS"
+        }
     }],
     deadline: {
         type: Date,

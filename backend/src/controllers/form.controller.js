@@ -131,23 +131,36 @@ export const getFacultyClassess = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Faculty not found");
     }
 
-    const faculty_subject = await FacultySubject.find({ faculty: faculty._id })
-        .select("classSection classYear formType classDepartment subject")
+    const facultySubject = await FacultySubject.find({ faculty: faculty._id })
+        .select("formType class_id subject batch_code")
         .populate({
-            path: "classDepartment",
-            select: "code"
+            path: "class_id",
+            populate: {
+                path: "dept",
+                select: "code"
+            },
         })
         .populate({
             path: "subject",
             select: "name"
         });
 
-    if (!faculty) {
+    if (!Array.isArray(facultySubject) || facultySubject.length === 0) {
         throw new ApiError(404, "No subjects found");
     }
 
+    const formattedFacultySubject = facultySubject.map((fs) => ({
+        _id: fs._id,
+        class_year: fs.class_id.year,
+        class_name: fs.class_id.name,
+        batch_code: fs.batch_code,
+        formType: fs.formType,
+        department: fs.class_id.dept.code,
+        subject: fs.subject?.name
+    }))
+
     return res.status(200).json(
-        new ApiResponse(200, faculty_subject, "successfully fetched classess")
+        new ApiResponse(200, formattedFacultySubject, "successfully fetched classess")
     );
 });
 

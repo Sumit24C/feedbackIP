@@ -15,6 +15,10 @@ const departmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Faculty",
     },
+    isConfigured: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true })
 
 const Department = mongoose.model("Department", departmentSchema);

@@ -10,10 +10,19 @@ const facultySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Department",
     },
-    isHOD: {
-        type: Boolean,
-        default: false
-    },
+    designation: {
+        type: String,
+        enum: [
+            "Assistant Professor",
+            "Associate Professor",
+            "Professor",
+            "HOD",
+            "Lecturer",
+            "Visiting Faculty"
+        ],
+        default: "Assistant Professor",
+        required: true
+    }
 }, { timestamps: true });
 
 facultySchema.pre("deleteOne", {

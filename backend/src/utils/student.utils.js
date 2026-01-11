@@ -53,10 +53,9 @@ export const getStudentYear = (studentAcademicYear) => {
     if (currentMonth >= 6) {
         currentYear++;
     }
-    
+
     let studentYear = "";
     const diff = studentAcademicYear - currentYear;
-
     switch (diff) {
         case 0:
             studentYear = "BY";
@@ -77,3 +76,19 @@ export const getStudentYear = (studentAcademicYear) => {
 
     return studentYear;
 }
+
+export const resolveBatchCodes = (batches, roll_no) => {
+    return batches
+        .filter(
+            b => roll_no >= b.rollRange.from && roll_no <= b.rollRange.to
+        )
+        .map(b => ({ batch_code: b.code, formType: b.type }));
+};
+
+export const resolveBatchCodeByType = (batches, roll_no, formType) => {
+    return batches
+        .filter(
+            b => formType === b.type && roll_no >= b.rollRange.from && roll_no <= b.rollRange.to
+        ).map((b) => b.code);
+
+};

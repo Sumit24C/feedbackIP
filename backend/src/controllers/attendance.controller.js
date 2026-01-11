@@ -7,6 +7,9 @@ import { Faculty } from "../models/faculty.model.js";
 import { Student } from "../models/student.model.js";
 import { getStudentAcademicYear } from "../utils/getStudentAcademicYear.js";
 import mongoose from "mongoose";
+import { getCurrentSemester } from "../utils/subject.utils.js";
+
+const CURRENT_SEMESTER = getCurrentSemester();
 
 export const getClassStudent = asyncHandler(async (req, res) => {
     const faculty = await Faculty.findOne({ user_id: req.user?._id });
@@ -69,7 +72,7 @@ export const getFacultyClassByFacultyId = asyncHandler(async (req, res) => {
 });
 
 export const createAttendance = asyncHandler(async (req, res) => {
-    const { attendance, faculty_id, subject, classSection, year, dept, createdAt } = req.body;
+    const { attendance, createdAt } = req.body;
 
     const faculty = await Faculty.findOne({ user_id: req.user?._id });
     if (!faculty) {
@@ -142,6 +145,7 @@ export const updateAttendance = asyncHandler(async (req, res) => {
     if (createdAt && !isNaN(new Date(createdAt))) {
         attendanceDoc.createdAt = new Date(createdAt)
     }
+
     await attendanceDoc.save();
 
     return res.status(200).json(
@@ -184,7 +188,6 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
     }
 
     const attendance = await Attendance.aggregate([
-        { $unwind: "$students" },
         {
             $match: {
                 "students.student": student._id
@@ -203,19 +206,26 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
                             localField: "subject",
                             foreignField: "_id",
                             as: "subject",
-                            pipeline: [{
-                                $project: {
-                                    name: 1,
-                                    _id: 1
+                            pipeline: [
+                                {
+                                    $match: {
+                                        semester: CURRENT_SEMESTER
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        name: 1,
+                                        _id: 1
+                                    }
                                 }
-                            }]
+                            ]
                         }
                     },
                 ]
             }
         },
         { $unwind: "$facultySubject" },
-        { $unwind: "$facultySubject.subject" },
+        { $unwind: { path: "$facultySubject.subject", preserveNullAndEmptyArrays: true } },
         {
             $lookup: {
                 from: "faculties",
@@ -288,8 +298,8 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
         }
     ]);
 
-    if (!attendance) {
-        throw new ApiError(500, "Failed to fetch attendance record");
+    if (!Array.isArray(attendance) || attendance.length === 0) {
+        throw new ApiError(404, "Attendance not created yet");
     }
 
     return res.status(200).json(
@@ -321,7 +331,6 @@ export const getStudentAttendanceBySubject = asyncHandler(async (req, res) => {
     }
 
     const data = await Attendance.aggregate([
-        { $unwind: "$students" },
         { $match: matchQuery },
         { $sort: { createdAt: -1 } },
         { $limit: limitNumber + 1 },
@@ -400,11 +409,7 @@ export const getClassByFacultySubject = asyncHandler(async (req, res) => {
                     { $unwind: "$user" },
                     {
                         $project: {
-                            _id: 1,
-                            dept: 1,
-                            isHOD: 1,
                             facultyName: "$user.fullname",
-                            facultyEmail: "$user.email",
                         },
                     },
                 ],
@@ -414,7 +419,7 @@ export const getClassByFacultySubject = asyncHandler(async (req, res) => {
         {
             $project: {
                 _id: 0,
-                facultySubject: "$_id",
+                facultyName: "$faculty.facultyName",
                 subject: "$subject.name",
                 formType: 1,
                 faculty: 1,
@@ -462,27 +467,45 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
                 from: "subjects",
                 localField: "subject",
                 foreignField: "_id",
-                as: "subject"
-            }
-        },
-        { $unwind: "$subject" },
-        {
-            $lookup: {
-                from: "departments",
-                localField: "classDepartment",
-                foreignField: "_id",
-                as: "department",
+                as: "subject",
                 pipeline: [
                     {
-                        $project: {
-                            name: 1
+                        $match: {
+                            semester: CURRENT_SEMESTER
                         }
                     }
                 ]
             }
         },
+        { $unwind: { path: "$subject", preserveNullAndEmptyArrays: true } },
         {
-            $unwind: "$department"
+            $lookup: {
+                from: "classsections",
+                localField: "class_id",
+                foreignField: "_id",
+                as: "class_id",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "departments",
+                            localField: "dept",
+                            foreignField: "_id",
+                            as: "department",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        name: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    { $unwind: "$department" },
+                ]
+            }
+        },
+        {
+            $unwind: "$class_id"
         },
         { $unwind: { path: "$attendance", preserveNullAndEmptyArrays: true } },
         {
@@ -497,9 +520,10 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
                 facultySubject: { $first: "$_id" },
                 subject: { $first: "$subject.name" },
                 formType: { $first: "$formType" },
-                classYear: { $first: "$classYear" },
-                classSection: { $first: "$classSection" },
-                department: { $first: "$department.name" },
+                class_year: { $first: "$class_id.year" },
+                class_name: { $first: "$class_id.name" },
+                batch_code: { $first: "$batch_code" },
+                department: { $first: "$class_id.department.name" },
                 totalClassess: { $addToSet: "$attendance._id" },
                 totalPresent: {
                     $sum: {
@@ -553,15 +577,16 @@ export const getStudentAttendanceByFacultyId = asyncHandler(async (req, res) => 
                 facultySubject: 1,
                 subject: 1,
                 department: 1,
-                classSection: 1,
+                batch_code: 1,
+                class_name: 1,
+                class_year: 1,
                 formType: 1,
-                classYear: 1,
                 totalClassess: 1,
                 totalPercentage: 1,
             }
         },
         {
-            $sort: { classSection: 1 }
+            $sort: { class_year: 1, formType: 1 }
         }
     ]);
 
@@ -583,9 +608,16 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
     const limitNumber = Math.max(parseInt(req.query.limit) || 5, 1);
     const facultySubject = await FacultySubject
         .findById(faculty_subject)
-        .populate(
-            "subject", "name subject_code"
-        ).select("classSection formType classYear classDepartment");
+        .populate({
+            path: "subject",
+            select: "name"
+        })
+        .populate({
+            path: "class_id",
+            select: "dept year name batches",
+            populate: { path: "dept", select: "name" }
+        })
+        .select("formType class_id batch_code");
 
     if (!facultySubject) {
         throw new ApiError(404, "Faculty not found for this subject");
@@ -596,33 +628,33 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
     });
 
     const totalPages = Math.ceil(attendanceCount / limitNumber);
+    const formattedFacultySubject = {
+        class_name: facultySubject.class_id?.name,
+        class_year: facultySubject.class_id?.year,
+        subject: facultySubject.subject.name,
+        batch_code: facultySubject.batch_code,
+        formType: facultySubject.formType
+    };
 
     if (attendanceCount === 0) {
-        const academic_year = getStudentAcademicYear(facultySubject.classYear);
-        const studentClassSection = facultySubject.classSection[0];
         const studentObj = {
-            dept: facultySubject.classDepartment,
-            classSection: studentClassSection,
-            academic_year: academic_year,
-        }
+            dept: facultySubject.class_id.dept._id,
+            class_id: facultySubject.class_id._id
+        };
 
-        if (facultySubject.formType === "practical") {
-            const section = parseInt(facultySubject.classSection[1]);
-            if (facultySubject.classYear === "FY") {
-                if (section == 1) {
-                    studentObj.roll_no = { $lte: 22 };
-                } else if (section == 2) {
-                    studentObj.roll_no = { $lte: 36 };
-                } else {
-                    studentObj.roll_no = { $gt: 36 };
-                }
-            } else {
-                if (section == 1) {
-                    studentObj.roll_no = { $lte: 36 };
-                } else {
-                    studentObj.roll_no = { $gt: 36 };
-                }
+        if (facultySubject.formType !== "theory") {
+            const batch = facultySubject.class_id.batches.find(
+                b => b.code === facultySubject.batch_code
+            );
+
+            if (!batch || !batch.rollRange) {
+                throw new ApiError(400, "Invalid batch or roll range");
             }
+
+            studentObj.roll_no = {
+                $gte: batch.rollRange.from,
+                $lte: batch.rollRange.to
+            };
         }
 
         const student = await Student.find(studentObj)
@@ -642,7 +674,7 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
             attendance_record,
             totalPages: 0,
             currentPage: 1,
-            facultySubject: facultySubject
+            facultySubject: formattedFacultySubject
         }
 
         return res.status(200).json(
@@ -736,7 +768,7 @@ export const getStudentAttendanceByClass = asyncHandler(async (req, res) => {
         attendance_record: attendance_record,
         currentPage: pageNumber,
         totalPages: totalPages,
-        facultySubject: facultySubject,
+        facultySubject: formattedFacultySubject,
     }
 
     return res.status(200).json(
