@@ -37,7 +37,7 @@ function DepartmentLayout() {
     if (!dept) return <div>Department not found</div>;
 
     return (
-        <div className="bg-gray-50 p-4 sm:p-6 space-y-4">
+        <div className="bg-gray-50 p-2 space-y-4">
 
             <div className="flex items-center justify-between gap-4 flex-wrap">
 
@@ -53,6 +53,7 @@ function DepartmentLayout() {
                         { to: "classess", label: "Class" },
                         { to: "faculties", label: "Faculties" },
                         { to: "subjects", label: "Subjects" },
+                        { to: "faculty-subjects", label: "Faculty-Subjects" },
                     ].map((tab) => (
                         <NavLink
                             key={tab.label}

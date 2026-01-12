@@ -1,13 +1,13 @@
 import Home from "./Home";
 import Login from "./Login";
-import Signup from "./Signup";
+import RegisterInstitute from "./RegisterInstitute";
 import UnAuthorized from "./UnAuthorized";
 import NotFound from "./NotFound";
 
 export {
     Home,
     Login,
-    Signup,
+    RegisterInstitute,
     UnAuthorized,
     NotFound
 }

@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { MoreVertical, Eye, Trash } from "lucide-react";
+import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function DepartmentList() {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
-
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openMenu, setOpenMenu] = useState(null);
@@ -15,10 +15,10 @@ function DepartmentList() {
 
   const fetchDepartment = async () => {
     try {
-      const res = await axiosPrivate.get("/admin");
+      const res = await axiosPrivate.get(`/admin`);
       setDepartments(res.data.data);
-    } catch (err) {
-      toast.error("Failed to load departments");
+    } catch (error) {
+      toast.error(extractErrorMsg(error) || "Failed to load departments");
     } finally {
       setLoading(false);
     }
@@ -26,7 +26,6 @@ function DepartmentList() {
   useEffect(() => {
     fetchDepartment();
   }, []);
-  
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -42,11 +41,13 @@ function DepartmentList() {
     if (!confirm("Are you sure you want to delete this department?")) return;
     setLoading(true);
     try {
-      await axiosPrivate.delete(`/admin/${id}`);
+      const res = await axiosPrivate.delete(`/admin/${id}`);
       await fetchDepartment();
-      toast.success("Department deleted");
-    } catch (err) {
-      toast.error("Failed to delete");
+      toast.success(res.data.message || "Department deleted");
+    } catch (error) {
+      toast.error(extractErrorMsg(error) || "Failed to delete");
+    } finally {
+      setLoading(false)
     }
   };
 
@@ -71,6 +72,7 @@ function DepartmentList() {
               <th className="p-4 font-semibold">Name</th>
               <th className="p-4 font-semibold">Students</th>
               <th className="p-4 font-semibold">Faculties</th>
+              <th className="p-4 font-semibold">Classes</th>
               <th className="p-4 font-semibold">Subjects</th>
               <th className="p-4 text-center font-semibold">Actions</th>
             </tr>
@@ -85,6 +87,7 @@ function DepartmentList() {
                 <td className="p-4">{dept.name}</td>
                 <td className="p-4">{dept.studentCount}</td>
                 <td className="p-4">{dept.facultyCount}</td>
+                <td className="p-4">{dept.classCount}</td>
                 <td className="p-4">{dept.subjectCount}</td>
 
                 <td className="p-4 relative text-center">

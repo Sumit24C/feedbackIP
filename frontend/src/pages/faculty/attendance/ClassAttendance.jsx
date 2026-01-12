@@ -266,7 +266,7 @@ function ClassAttendance() {
       </div>
       <div className="flex-1 overflow-hidden min-h-0">
         <div
-          className={`grid h-full min-h-0 gap-6 ${studentChunks.length > 1
+          className={`grid h-full min-h-0 gap-4 ${studentChunks.length > 1
             ? "grid-cols-1 sm:grid-cols-2"
             : "grid-cols-1"
             }`}

@@ -26,9 +26,10 @@ export const ENTITY_CONFIG = {
         },
       },
       {
-        name: "classSection",
+        name: "class_name",
         label: "Section",
-        type: "text",
+        type: "select",
+        options: ["A", "B", "C", "D"],
         rules: { required: true },
       },
       {
@@ -115,6 +116,112 @@ export const ENTITY_CONFIG = {
         label: "Semester",
         type: "select",
         options: ["odd", "even"],
+        rules: { required: true },
+      },
+    ],
+  },
+
+  classes: {
+    title: "Add Class",
+    uploadTitle: "Upload Classes",
+    uploadAccept: ".xlsx,.xls",
+
+    fields: [
+      {
+        name: "name",
+        label: "Class Name",
+        type: "text",
+        rules: { required: true },
+      },
+      {
+        name: "year",
+        label: "Year",
+        type: "select",
+        options: ["FY", "SY", "TY", "BY"],
+        rules: { required: true },
+      },
+      {
+        name: "strength",
+        label: "Strength",
+        type: "number",
+        rules: { required: true, min: 1 },
+      },
+    ],
+    batches: {
+      label: "Batches",
+      min: 1,
+      fields: [
+        {
+          name: "code",
+          label: "Batch Code",
+          type: "text",
+          rules: { required: true },
+        },
+        {
+          name: "type",
+          label: "Batch Type",
+          type: "select",
+          options: ["practical", "tutorial"],
+          rules: { required: true },
+        },
+        {
+          name: "from",
+          label: "Roll From",
+          type: "number",
+          rules: { required: true },
+        },
+        {
+          name: "to",
+          label: "Roll To",
+          type: "number",
+          rules: { required: true },
+        },
+      ],
+    },
+  },
+
+  facultySubjects: {
+    title: "Add FacultySubject",
+    uploadTitle: "Upload FacultySubjects",
+    uploadAccept: ".xlsx,.xls",
+    fields: [
+      {
+        name: "faculty_email",
+        label: "Faculty email",
+        type: "email",
+        rules: { required: true },
+      },
+      {
+        name: "subject_code",
+        label: "Subject Code",
+        type: "text",
+        rules: { required: true },
+      },
+      {
+        name: "class_year",
+        label: "Year",
+        type: "select",
+        options: ["FY", "SY", "TY", "BY"],
+        rules: { required: true },
+      },
+      {
+        name: "class_name",
+        label: "Class name",
+        type: "select",
+        options: ["A", "B", "C", "D"],
+        rules: { required: true },
+      },
+      {
+        name: "batch_code",
+        label: "Batch code",
+        type: "text",
+        rules: { required: true },
+      },
+      {
+        name: "formType",
+        label: "Type",
+        type: "select",
+        options: ["theory", "practical", "tutorial"],
         rules: { required: true },
       },
     ],

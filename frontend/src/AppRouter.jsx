@@ -3,13 +3,13 @@ import App from './App'
 import {
     Home,
     Login,
-    Signup,
     UnAuthorized,
-    NotFound
+    NotFound,
+    RegisterInstitute
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
-import { CreateDepartment, AdminDashboard, Department, DepartmentList, UploadFacultySubject, StudentTab, FacultyTab, SubjectTab, ClassTab } from './pages/admin'
-import { AttendanceList, FeedbackForm, FeedbackFormList, StudentDashboard, StudentProfilePage, SubjectAttendance } from './pages/student'
+import { CreateDepartment, Department, DepartmentList, StudentTab, FacultyTab, SubjectTab, ClassTab, FacultySubjectTab } from './pages/admin'
+import { AttendanceList, FeedbackForm, FeedbackFormList, StudentProfilePage, SubjectAttendance } from './pages/student'
 import { FacultyProfilePage, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse } from './pages/forms'
 import NoAccess from './pages/NoAccess'
@@ -23,22 +23,20 @@ function AppRouter() {
                     <Route path="/" element={<App />}>
                         {/* Admin routes */}
                         <Route path="admin" element={<Authorization role="admin" />}>
-                            <Route path='dashboard' element={<AdminDashboard />} />
                             <Route path='create-department' element={<CreateDepartment />} />
                             <Route path='department' element={<DepartmentList />} />
-                            <Route path='faculty-subject' element={<UploadFacultySubject />} />
                             <Route path="/admin/department/:dept_id" element={<Department />}>
                                 <Route index element={<StudentTab />} />
                                 <Route path="faculties" element={<FacultyTab />} />
                                 <Route path="subjects" element={<SubjectTab />} />
                                 <Route path="classess" element={<ClassTab />} />
+                                <Route path='faculty-subjects' element={<FacultySubjectTab />} />
                             </Route>
                         </Route>
 
                         {/* Student routes */}
                         <Route path="student" element={<Authorization role="student" />}>
                             <Route path='profile' element={<StudentProfilePage />} />
-                            <Route path='dashboard' element={<StudentDashboard />} />
                             <Route path='attendance' element={<AttendanceList />} />
                             <Route path='attendance/:id' element={<SubjectAttendance />} />
                             <Route path="forms" element={<FeedbackFormList />} />
@@ -65,7 +63,7 @@ function AppRouter() {
                 {/* Public Routes */}
                 <Route element={<AuthLayout authenticated={false} />}>
                     <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/register" element={<RegisterInstitute />} />
                     <Route path="/no-access" element={<NoAccess />} />
                 </Route>
 

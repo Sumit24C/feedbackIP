@@ -36,38 +36,42 @@ function AttendanceTable({
 
 
     return (
-        <Card className="h-full p-0">
-            <CardContent className="p-0 h-full overflow-y-auto overflow-x-auto">
-                <Table className="table-fixed">
-                    <TableHeader className="sticky top-0 bg-blue-100 z-10">
-                        <TableRow>
-                            <TableHead className="w-[70px] text-center">Roll</TableHead>
+        <Card className="h-full py-0 overflow-hidden">
+            <CardContent className="p-0 h-full overflow-auto">
+                <Table className="min-w-max">
+                    <TableHeader className="sticky top-0 z-50 bg-background">
+                        <TableRow className="border-b">
+                            <TableHead className="sticky top-0 left-0 z-40 bg-background w-[64px] text-center whitespace-nowrap">
+                                Roll
+                            </TableHead>
 
-                            <TableHead className="w-[80px] text-center whitespace-nowrap">
+                            <TableHead className="sticky top-0 left-[64px] z-40 bg-background w-[72px] text-center whitespace-nowrap">
                                 %
                             </TableHead>
 
-                            <TableHead className="max-w-[180px] truncate text-center hidden sm:table-cell">
+                            <TableHead className="sticky top-0 left-[136px] z-40 bg-background w-[150px] whitespace-nowrap hidden sm:table-cell">
                                 Name
                             </TableHead>
 
+
                             {isCreating && (
-                                <TableHead className="text-center whitespace-nowrap">
-                                    {new Date(
-                                        `${attendanceDate}T${attendanceTime}`
-                                    ).toLocaleString("en-IN", {
-                                        day: "2-digit",
-                                        month: "short",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}
+                                <TableHead className="sticky top-0 z-50 text-center whitespace-nowrap min-w-[120px] bg-background">
+                                    {new Date(`${attendanceDate}T${attendanceTime}`).toLocaleString(
+                                        "en-IN",
+                                        {
+                                            day: "2-digit",
+                                            month: "short",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                        }
+                                    )}
                                 </TableHead>
                             )}
 
                             {latestDates.map((session) => (
                                 <TableHead
                                     key={session._id}
-                                    className="text-center whitespace-nowrap"
+                                    className="text-center whitespace-nowrap "
                                 >
                                     {editingSessionId === session._id ? (
                                         <Input
@@ -79,33 +83,36 @@ function AttendanceTable({
                                                     date: new Date(e.target.value).toISOString(),
                                                 }))
                                             }
-                                            className="h-8 max-w-1/2 sm:max-w-3/4"
+                                            className="h-8 text-xs"
                                         />
                                     ) : (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button className="font-medium hover:underline">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="px-2 font-medium"
+                                                >
                                                     {new Date(session.date).toLocaleString("en-IN", {
                                                         day: "2-digit",
                                                         month: "short",
                                                         hour: "2-digit",
                                                         minute: "2-digit",
                                                     })}
-                                                </button>
+                                                </Button>
                                             </DropdownMenuTrigger>
 
-                                            <DropdownMenuContent align="center" className="w-28">
+                                            <DropdownMenuContent align="center">
                                                 <DropdownMenuItem
                                                     onClick={() => startUpdateSession(session._id)}
                                                 >
                                                     Update
                                                 </DropdownMenuItem>
-
                                                 <DropdownMenuItem
-                                                    className="text-red-600 focus:text-red-600"
+                                                    className="text-destructive focus:text-destructive"
                                                     onClick={() => handleDeleteSession(session._id)}
                                                 >
-                                                    {deleteLoading ? "deleting.." : "delete"}
+                                                    {deleteLoading ? "Deleting..." : "Delete"}
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -122,31 +129,35 @@ function AttendanceTable({
                             );
 
                             return (
-                                <TableRow key={student._id}>
-                                    <TableCell className="text-center">
+                                <TableRow key={student._id} className="hover:bg-muted/50">
+                                    <TableCell className="sticky left-0 z-20 bg-background w-[64px] text-center font-medium">
                                         {student.roll_no}
                                     </TableCell>
 
-                                    <TableCell className={`text-center font-semibold ${attendancePercentMap?.[student._id] < 75 ? "text-red-500" : "text-black"}`}>
+
+                                    <TableCell
+                                        className={`sticky left-[64px] z-20 bg-background w-[72px] text-center font-semibold ${attendancePercentMap?.[student._id] < 75
+                                            ? "text-destructive"
+                                            : "text-foreground"
+                                            }`}
+                                    >
                                         {attendancePercentMap?.[student._id] ?? 0}%
                                     </TableCell>
 
+
                                     <TableCell
-                                        className="hidden sm:table-cell max-w-[180px] text-center font-medium truncate"
+                                        className="sticky left-[136px] z-20 bg-background w-[150px] hidden sm:table-cell truncate"
                                         title={student.fullname}
                                     >
                                         {student.fullname}
                                     </TableCell>
 
+
                                     {isCreating && (
                                         <TableCell className="text-center">
                                             <Button
-                                                className="h-5 w-5"
-                                                variant={
-                                                    newAttendance[student._id]
-                                                        ? "success"
-                                                        : "destructive"
-                                                }
+                                                size="sm"
+                                                variant={newAttendance[student._id] ? "default" : "destructive"}
                                                 onClick={() => toggleAttendance(student._id)}
                                             >
                                                 {newAttendance[student._id] ? "P" : "A"}
@@ -161,11 +172,10 @@ function AttendanceTable({
                                             : attendanceMap[session.date];
 
                                         return (
-                                            <TableCell key={session._id} className="text-center">
+                                            <TableCell key={session._id} className="text-center min-w-[120px]">
                                                 {isEditing ? (
-                                                    <Button
-                                                        className="h-5 w-5"
-                                                        variant={value ? "success" : "destructive"}
+                                                    <button
+                                                        className={`font-semibold px-4 bg-gray-200 hover:cursor-pointer rounded-2xl ${value ? "text-green-600" : "text-red-600"}`}
                                                         onClick={() =>
                                                             setEditableSession((prev) => ({
                                                                 ...prev,
@@ -177,18 +187,19 @@ function AttendanceTable({
                                                         }
                                                     >
                                                         {value ? "P" : "A"}
-                                                    </Button>
+                                                    </button>
                                                 ) : value === undefined ? (
                                                     <span className="text-muted-foreground">–</span>
                                                 ) : value ? (
-                                                    <span className="text-green-600 font-semibold">P</span>
+                                                    <span className="font-semibold text-green-600">P</span>
                                                 ) : (
-                                                    <span className="text-red-600 font-semibold">A</span>
+                                                    <span className="font-semibold text-red-600">A</span>
                                                 )}
                                             </TableCell>
                                         );
                                     })}
                                 </TableRow>
+
                             );
                         })}
                     </TableBody>
