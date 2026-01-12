@@ -195,7 +195,7 @@ export const getFormById = asyncHandler(async (req, res) => {
 
     const formattedForm = {
         ...form,
-        facultySubject: form.facultySubject.map((fs) => fs._id)
+        facultySubject: form.facultySubject.map((fs) => fs._id.toString())
     };
 
     return res.status(200).json(

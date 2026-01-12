@@ -189,6 +189,9 @@ export const getStudentAttendanceByStudentId = asyncHandler(async (req, res) => 
 
     const attendance = await Attendance.aggregate([
         {
+            $unwind: "$students"
+        },
+        {
             $match: {
                 "students.student": student._id
             }
@@ -331,10 +334,10 @@ export const getStudentAttendanceBySubject = asyncHandler(async (req, res) => {
     }
 
     const data = await Attendance.aggregate([
+        { $unwind: "$students" },
         { $match: matchQuery },
         { $sort: { createdAt: -1 } },
         { $limit: limitNumber + 1 },
-
         {
             $project: {
                 _id: 0,
