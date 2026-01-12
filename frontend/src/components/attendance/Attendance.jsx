@@ -102,8 +102,8 @@ function Attendance({ facultySubjectId }) {
 
                     <span
                         className={`px-4 py-1 rounded-full text-sm font-semibold ${item.isPresent
-                                ? "bg-green-100 text-green-700"
-                                : "bg-destructive/10 text-destructive"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-destructive/10 text-destructive"
                             }`}
                     >
                         {item.isPresent ? "Present" : "Absent"}
@@ -114,7 +114,7 @@ function Attendance({ facultySubjectId }) {
             <div ref={sentinelRef} className="h-8 flex items-center justify-center">
                 {loading && (
                     <span className="text-sm text-muted-foreground">
-                        Loading more records…
+                        <div className="w-6 h-6 border-2 border-gray-400 border-t-black rounded-full animate-spin" />
                     </span>
                 )}
                 {!hasMoreRef.current && (

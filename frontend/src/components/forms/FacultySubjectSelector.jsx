@@ -152,7 +152,7 @@ function FacultySubjectSelector({
                             <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
                                 {filteredData.length > 0 ? (
                                     filteredData.map((item) => {
-                                        const isChecked = selectedClasses.includes(item._id);
+                                        const isChecked = selectedClasses.includes(item._id.toString());
                                         return (
                                             <div
                                                 key={item._id}

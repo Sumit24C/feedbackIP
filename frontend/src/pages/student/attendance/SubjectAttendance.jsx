@@ -31,7 +31,7 @@ function SubjectAttendancePage() {
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        Loading class details…
+        <div className="w-10 h-10 border-4 border-gray-400 border-t-black rounded-full animate-spin" />
       </div>
     );
   }
