@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import fs from "fs/promises";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
@@ -17,9 +16,15 @@ import { OAuth } from "../models/oauth.model.js";
 import { Attendance } from "../models/attendance.model.js"
 import { ClassSection } from "../models/class_section.model.js";
 import { getStudentYear } from "../utils/student.utils.js";
+import { Admin } from "../models/admin.model.js";
 
 //department controllers
 export const createDepartment = asyncHandler(async (req, res) => {
+    const admin = await Admin.findOne({ user_id: req.user._id });
+    if (!admin) {
+        throw new ApiError(404, "Admin not found")
+    }
+
     const { dept_name, dept_code } = req.body;
     if (!dept_name || !dept_name.trim() || !dept_code || !dept_code.trim()) {
         throw new ApiError(400, "department name, code  are required");
@@ -35,11 +40,15 @@ export const createDepartment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Excel of faculty, class and subject is required");
     }
 
-    const password = dept_code.toLowerCase() + "123";
+    const password = "faculty123";
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
-        const [department] = await Department.create([{ name: dept_name, code: dept_code }], { session });
+        const [department] = await Department.create([{
+            name: dept_name,
+            code: dept_code,
+            institute: admin.institute
+        }], { session });
         const deptId = department._id;
 
         const facultyData = await excelToJson(facultyExcel);
@@ -162,13 +171,373 @@ export const createDepartment = asyncHandler(async (req, res) => {
         console.error("Failed Full Creation:", error);
         throw new ApiError(500, "Failed to create department with full data");
     } finally {
-        if (facultyExcel?.path) await fs.unlink(facultyExcel.path);
-        if (subjectExcel?.path) await fs.unlink(subjectExcel.path);
-        if (classFile?.path) await fs.unlink(classFile.path);
+        // if (facultyExcel?.path) await fs.unlink(facultyExcel.path);
+        // if (subjectExcel?.path) await fs.unlink(subjectExcel.path);
+        // if (classFile?.path) await fs.unlink(classFile?.path);
     }
 
 });
 
+export const editDepartment = asyncHandler(async (req, res) => {
+    const { dept_id } = req.params;
+    if (!dept_id) {
+        throw new ApiError(400, "DepartmentId is required");
+    }
+
+    const { dept_name } = req.body;
+    if (!dept_name) {
+        throw new ApiError(400, "Department name is required");
+    }
+
+    const admin = await Admin.findOne({ user_id: req.user._id });
+    if (!admin) {
+        throw new ApiError(404, "Admin not found")
+    }
+
+    const department = await Department.findById(dept_id);
+    if (!department) {
+        throw new ApiError(404, "Department not found");
+    }
+
+    if (
+        !admin.institute ||
+        !dept.institute ||
+        !admin.institute.equals(dept.institute)
+    ) {
+        throw new ApiError(401, "Not authorized");
+    }
+
+    const updatedDepartment = await Department.findByIdAndUpdate(
+        department._id,
+        {
+            $set: {
+                name: dept_name
+            }
+        },
+        { new: true }
+    )
+
+    if (!updatedDepartment) {
+        throw new ApiError(500, "Failed to update department name");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, updatedDepartment, "successfully updated department name")
+    );
+
+});
+
+export const getDepartments = asyncHandler(async (req, res) => {
+    const admin = await Admin.findOne({ user_id: req.user._id });
+    if (!admin) {
+        throw new ApiError(404, "Admin not found")
+    }
+
+    const departments = await Department.aggregate([
+        {
+            $match: {
+                institute: new mongoose.Types.ObjectId(admin.institute)
+            }
+        },
+        {
+            $lookup: {
+                from: "students",
+                localField: "_id",
+                foreignField: "dept",
+                as: "students",
+            }
+        },
+        {
+            $lookup: {
+                from: "faculties",
+                localField: "_id",
+                foreignField: "dept",
+                as: "faculties",
+            }
+        },
+        {
+            $lookup: {
+                from: "subjects",
+                localField: "_id",
+                foreignField: "dept",
+                as: "subjects",
+            }
+        },
+        {
+            $lookup: {
+                from: "classsections",
+                localField: "_id",
+                foreignField: "dept",
+                as: "classsections",
+            }
+        },
+        {
+            $addFields: {
+                hodDetails: {
+                    $first: {
+                        $filter: {
+                            input: "$faculties",
+                            as: "fac",
+                            cond: { $eq: ["$$fac.isHod", true] }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "hodDetails.user_id",
+                foreignField: "_id",
+                as: "hodUser",
+            }
+        },
+        {
+            $project: {
+                name: 1,
+                studentCount: { $size: "$students" },
+                facultyCount: { $size: "$faculties" },
+                subjectCount: { $size: "$subjects" },
+                classCount: { $size: "$classsections" },
+                hod: {
+                    $ifNull: [
+                        { $arrayElemAt: ["$hodUser.fullname", 0] },
+                        "Not Assigned"
+                    ]
+                }
+            }
+        }
+
+    ]);
+
+    if (!departments) {
+        throw new ApiError(404, "Departments not found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, departments, "successfully fetched departments")
+    );
+});
+
+export const getDepartmentById = asyncHandler(async (req, res) => {
+    const admin = await Admin.findOne({ user_id: req.user._id });
+    if (!admin) {
+        throw new ApiError(404, "Admin not found")
+    }
+
+    const { dept_id } = req.params;
+    const department = await Department.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(dept_id),
+                institute: admin.institute
+            }
+        },
+        {
+            $lookup: {
+                from: "students",
+                localField: "_id",
+                foreignField: "dept",
+                as: "students",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            user: { $arrayElemAt: ["$user", 0] }
+                        }
+                    },
+                    {
+                        $project: {
+                            roll_no: 1,
+                            academic_year: 1,
+                            classSection: 1,
+                            "user.fullname": 1,
+                            "user.email": 1
+                        }
+                    },
+                ]
+            }
+        },
+        {
+            $sort: { roll_no: 1 }
+        },
+        {
+            $lookup: {
+                from: "faculties",
+                localField: "_id",
+                foreignField: "dept",
+                as: "faculties",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            user: { $arrayElemAt: ["$user", 0] }
+                        }
+                    },
+                    {
+                        $project: {
+                            isHOD: 1,
+                            "user.fullname": 1,
+                            "user.email": 1,
+                            facultysubjects: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "subjects",
+                localField: "_id",
+                foreignField: "dept",
+                as: "subjects",
+                pipeline: [
+                    {
+                        $project: {
+                            name: 1,
+                            subject_code: 1,
+                            year: 1,
+                            type: 1,
+                            semester: 1
+                        }
+                    }
+                ]
+            }
+        },
+    ]);
+
+    if (department.length === 0) {
+        throw new ApiError(404, "Department not found");
+    }
+    return res.status(200).json(
+        new ApiResponse(200, department[0], "successfull fetched department")
+    );
+});
+
+export const deleteDepartment = asyncHandler(async (req, res) => {
+
+    const admin = await Admin.findOne({ user_id: req.user._id });
+    if (!admin) {
+        throw new ApiError(404, "Admin not found")
+    }
+
+    const { dept_id } = req.params;
+    if (!dept_id) {
+        throw new ApiError(400, "Department id is required");
+    }
+
+    const dept = await Department.findById(dept_id);
+    if (!dept) {
+        throw new ApiError(404, "Department not found");
+    }
+
+    if (
+        !admin.institute ||
+        !dept.institute ||
+        !admin.institute.equals(dept.institute)
+    ) {
+        throw new ApiError(401, "Not authorized");
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const students = await Student.find({ dept: dept_id })
+            .select("user_id")
+            .session(session);
+
+        const faculties = await Faculty.find({ dept: dept_id })
+            .select("user_id")
+            .session(session);
+
+        const userIds = [
+            ...students.map((s) => s.user_id),
+            ...faculties.map((f) => f.user_id),
+        ];
+
+        const classSections = await ClassSection.find({ dept: dept_id })
+            .select("_id")
+            .session(session);
+
+        const classIds = classSections.map((cls) => cls._id);
+
+        const facultySubjects = await FacultySubject.find({
+            class_id: { $in: classIds },
+        })
+            .select("_id")
+            .session(session);
+
+        const facultySubjectIds = facultySubjects.map((fs) => fs._id);
+
+        if (facultySubjectIds.length > 0) {
+            await Attendance.deleteMany(
+                { facultySubject: { $in: facultySubjectIds } },
+                { session }
+            );
+
+            await FacultySubject.deleteMany(
+                { _id: { $in: facultySubjectIds } },
+                { session }
+            );
+        }
+
+        await Response.deleteMany({ dept: dept_id }, { session });
+        await Form.deleteMany(
+            {
+                $or: [
+                    {
+                        targetType: "DEPARTMENT",
+                        dept: dept_id,
+                    },
+                    {
+                        targetType: "CLASS",
+                        facultySubject: { $in: facultySubjectIds },
+                    },
+                ],
+            },
+            { session }
+        );
+        await Subject.deleteMany({ dept: dept_id }, { session });
+        await Faculty.deleteMany({ dept: dept_id }, { session });
+        await Student.deleteMany({ dept: dept_id }, { session });
+        await ClassSection.deleteMany({ dept: dept_id }, { session });
+        if (userIds.length > 0) {
+            await OAuth.deleteMany({ user_id: { $in: userIds } }, { session });
+            await User.deleteMany({ _id: { $in: userIds } }, { session });
+        }
+
+        await Department.findByIdAndDelete(dept_id, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json(
+            new ApiResponse(200, {}, "Successfully deleted department and all related data")
+        );
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("deleteDepartment :: error :: ", error);
+        throw new ApiError(500, "Something went wrong while deleting");
+    }
+});
+
+//facultySubject controllers
 export const uploadFacultySubjects = asyncHandler(async (req, res) => {
     const { dept_id } = req.params;
     if (!dept_id) {
@@ -316,15 +685,11 @@ export const uploadFacultySubjects = asyncHandler(async (req, res) => {
     );
 });
 
-export const editDepartment = asyncHandler(async (req, res) => {
+export const getFacultySubjectsByDepartmentId = asyncHandler(async (req, res) => {
     const { dept_id } = req.params;
+
     if (!dept_id) {
         throw new ApiError(400, "DepartmentId is required");
-    }
-
-    const { dept_name } = req.body;
-    if (!dept_name) {
-        throw new ApiError(400, "Department name is required");
     }
 
     const department = await Department.findById(dept_id);
@@ -332,252 +697,158 @@ export const editDepartment = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
-    const updatedDepartment = await Department.findByIdAndUpdate(
-        department._id,
-        {
-            $set: {
-                name: dept_name
-            }
-        },
-        { new: true }
-    )
+    const classes = await ClassSection.find({ dept: dept_id }).select("_id");
 
-    if (!updatedDepartment) {
-        throw new ApiError(500, "Failed to update department name");
+    if (classes.length === 0) {
+        return res.status(200).json(
+            new ApiResponse(200, [], "No classes found for this department")
+        );
     }
 
-    return res.status(200).json(
-        new ApiResponse(200, updatedDepartment, "successfully updated department name")
-    );
+    const classIds = classes.map(c => c._id);
 
-});
-
-export const getDepartments = asyncHandler(async (req, res) => {
-    const departments = await Department.aggregate([
-        {
-            $lookup: {
-                from: "students",
-                localField: "_id",
-                foreignField: "dept",
-                as: "students",
+    const facultySubjects = await FacultySubject.find({
+        class_id: { $in: classIds }
+    })
+        .select("formType batch_code class_id subject faculty")
+        .populate({
+            path: "class_id",
+            select: "name year",
+            populate: {
+                path: "dept",
+                select: "name code"
             }
-        },
-        {
-            $lookup: {
-                from: "faculties",
-                localField: "_id",
-                foreignField: "dept",
-                as: "faculties",
-            }
-        },
-        {
-            $lookup: {
-                from: "subjects",
-                localField: "_id",
-                foreignField: "dept",
-                as: "subjects",
-            }
-        },
-        {
-            $addFields: {
-                hodDetails: {
-                    $first: {
-                        $filter: {
-                            input: "$faculties",
-                            as: "fac",
-                            cond: { $eq: ["$$fac.isHod", true] }
-                        }
-                    }
-                }
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "hodDetails.user_id",
-                foreignField: "_id",
-                as: "hodUser",
-            }
-        },
-        {
-            $project: {
-                name: 1,
-                studentCount: { $size: "$students" },
-                facultyCount: { $size: "$faculties" },
-                subjectCount: { $size: "$subjects" },
-                hod: {
-                    $ifNull: [
-                        { $arrayElemAt: ["$hodUser.fullname", 0] },
-                        "Not Assigned"
-                    ]
-                }
-            }
-        }
-
-    ]);
+        })
+        .populate({
+            path: "subject",
+            select: "name subject_code"
+        })
+        .populate({
+            path: "faculty",
+            populate: {
+                path: "user_id",
+                select: "email"
+            },
+        });
 
     return res.status(200).json(
-        new ApiResponse(200, departments, "successfully fetched departments")
+        new ApiResponse(
+            200,
+            facultySubjects,
+            "FacultySubject fetched successfully"
+        )
     );
 });
 
-export const getDepartmentById = asyncHandler(async (req, res) => {
-
+export const getFacultySubjectMeta = asyncHandler(async (req, res) => {
     const { dept_id } = req.params;
-    const department = await Department.aggregate([
-        {
-            $match: { _id: new mongoose.Types.ObjectId(dept_id) }
-        },
-        {
-            $lookup: {
-                from: "students",
-                localField: "_id",
-                foreignField: "dept",
-                as: "students",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "user_id",
-                            foreignField: "_id",
-                            as: "user"
-                        }
-                    },
-                    {
-                        $addFields: {
-                            user: { $arrayElemAt: ["$user", 0] }
-                        }
-                    },
-                    {
-                        $project: {
-                            roll_no: 1,
-                            academic_year: 1,
-                            classSection: 1,
-                            "user.fullname": 1,
-                            "user.email": 1
-                        }
-                    },
-                ]
-            }
-        },
-        {
-            $sort: { roll_no: 1 }
-        },
-        {
-            $lookup: {
-                from: "faculties",
-                localField: "_id",
-                foreignField: "dept",
-                as: "faculties",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "user_id",
-                            foreignField: "_id",
-                            as: "user"
-                        }
-                    },
-                    {
-                        $addFields: {
-                            user: { $arrayElemAt: ["$user", 0] }
-                        }
-                    },
-                    {
-                        $project: {
-                            isHOD: 1,
-                            "user.fullname": 1,
-                            "user.email": 1,
-                            facultysubjects: 1
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "subjects",
-                localField: "_id",
-                foreignField: "dept",
-                as: "subjects",
-                pipeline: [
-                    {
-                        $project: {
-                            name: 1,
-                            subject_code: 1,
-                            year: 1,
-                            type: 1,
-                            semester: 1
-                        }
-                    }
-                ]
-            }
-        },
-    ]);
 
+    if (!dept_id) {
+        throw new ApiError(400, "DepartmentId is required");
+    }
 
-    if (department.length === 0) {
+    const department = await Department.findById(dept_id);
+    if (!department) {
         throw new ApiError(404, "Department not found");
     }
+
+    const faculties = await Faculty.find({ dept: dept_id })
+        .populate({
+            path: "user_id",
+            select: "fullname email",
+        })
+        .select("_id user_id");
+
+    const subjects = await Subject.find({ dept: dept_id })
+        .select("_id name");
+
+    const classes = await ClassSection.find({ dept: dept_id })
+        .select("_id name year batches");
+
+    const batchesByClass = {};
+    classes.forEach(cls => {
+        batchesByClass[cls._id] = cls.batches.map(b => ({
+            code: b.code,
+            type: b.type,
+            rollRange: b.rollRange,
+        }));
+    });
+
     return res.status(200).json(
-        new ApiResponse(200, department[0], "successfull fetched department")
+        new ApiResponse(200, {
+            faculties: faculties.map(f => ({
+                _id: f._id,
+                name: f.user_id?.fullname,
+                email: f.user_id?.email,
+            })),
+            subjects,
+            classes: classes.map(c => ({
+                _id: c._id,
+                name: c.name,
+                year: c.year,
+            })),
+            batchesByClass,
+        }, "FacultySubject meta fetched successfully")
     );
 });
 
-export const deleteDepartment = asyncHandler(async (req, res) => {
+export const addFacultySubjects = asyncHandler(async (req, res) => {
+
     const { dept_id } = req.params;
     if (!dept_id) {
-        throw new ApiError(400, "Department id is required");
+        throw new ApiError(403, "DepartmentId and StudentId are required");
     }
 
-    const dept = await Department.findById(dept_id);
-    if (!dept) {
+    const {
+        faculty_id,
+        subject_id,
+        class_id,
+        batch_code,
+        formType
+    } = req.body;
+
+    if (!faculty_id || !subject_id || !class_id || !batch_code || !formType) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const department = await Department.findById(dept_id);
+    if (!department) {
         throw new ApiError(404, "Department not found");
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const classSection = await ClassSection.findById(class_id);
 
-    try {
-        const students = await Student.find({ dept: dept_id }).select("user_id").session(session);
-        const faculties = await Faculty.find({ dept: dept_id }).select("user_id").session(session);
-        const userIds = [...students.map(s => s.user_id), ...faculties.map(f => f.user_id)];
-
-        const facultySubjects = await FacultySubject.find({ dept: dept_id }).select("_id").session(session)
-        const facultySubjectIds = facultySubjects.map((fs) => fs._id);
-
-        await Attendance.deleteMany({
-            facultySubject: { $in: facultySubjectIds }
-        }, { session })
-        await Response.deleteMany({ dept: dept_id }, { session })
-        await Form.deleteMany({ dept: dept_id }, { session })
-        await FacultySubject.deleteMany({ dept: dept_id }, { session })
-        await Subject.deleteMany({ dept: dept_id }, { session })
-        await Faculty.deleteMany({ dept: dept_id }, { session })
-        await Student.deleteMany({ dept: dept_id }, { session })
-
-        if (userIds.length > 0) {
-            await OAuth.deleteMany({ user_id: { $in: userIds } }, { session })
-            await User.deleteMany(
-                { _id: { $in: userIds } },
-                { session }
-            );
-        }
-
-        await Department.findByIdAndDelete(dept_id, { session })
-
-        await session.commitTransaction();
-        session.endSession();
-
-        return res.status(200).json(
-            new ApiResponse(200, {}, "Successfully deleted department and all related data")
-        );
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error("deleteDepartment :: error :: ", error)
-        throw new ApiError(500, "Something went wrong while deleting");
+    if (!classSection) {
+        throw new ApiError(404, "ClassSection not found");
     }
+
+    const subject = await Subject.findById(subject_id);
+
+    if (!subject) {
+        throw new ApiError(404, "Subject not found");
+    }
+
+    const faculty = await Faculty.findById(faculty_id);
+
+    if (!faculty) {
+        throw new ApiError(404, "faculty not found");
+    }
+
+    const facultySubject = await FacultySubject.create({
+        faculty: faculty._id,
+        subject: subject._id,
+        class_id: classSection._id,
+        batch_code: batch_code,
+        formType: formType
+    });
+
+    if (!facultySubject) {
+        throw new ApiError(500, "failed to create facultySubject");
+    }
+
+    return res.status(200).json(
+        200, {}, "successfully created facultySubject data"
+    );
 });
 
 //student controllers
@@ -606,7 +877,7 @@ export const addStudentFile = asyncHandler(async (req, res) => {
     session.startTransaction();
 
     try {
-        const defaultPassword = "student123";
+        const defaultPassword = `${department.code.toLowerCase()}123`;
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         const emails = studentData.map(s => s.email.toLowerCase());
@@ -632,7 +903,10 @@ export const addStudentFile = asyncHandler(async (req, res) => {
 
         const classMap = new Map();
         classSections.forEach(cs => {
-            classMap.set(`${cs.year}_${cs.name}`, cs._id);
+            classMap.set(`${cs.year}_${cs.name}`, {
+                class_id: cs._id,
+                strength: cs.strength
+            });
         });
 
         const newUsers = [];
@@ -648,9 +922,9 @@ export const addStudentFile = asyncHandler(async (req, res) => {
 
             const year = getStudentYear(s.academic_year);
             const key = `${year}_${s.class_name}`;
-            const class_id = classMap.get(key);
+            const { class_id, strength } = classMap.get(key);
 
-            if (!class_id) {
+            if (!class_id || !strength) {
                 skipped++;
                 continue;
             }
@@ -664,6 +938,10 @@ export const addStudentFile = asyncHandler(async (req, res) => {
                 password: hashedPassword,
                 role: "student"
             });
+
+            if (Number(strength) < Number(roll_no)) {
+                throw new ApiError(400, "Roll no cannot be more than class strength");
+            }
 
             newStudents.push({
                 user_id: userId,
@@ -740,7 +1018,7 @@ export const addStudent = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Student already exists");
     }
 
-    const password = department.code.toLowerCase() + "1234";
+    const password = department.code.toLowerCase() + "123";
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -753,7 +1031,8 @@ export const addStudent = asyncHandler(async (req, res) => {
     const classSection = await ClassSection.findOne({
         name: class_name,
         year: getStudentYear(academic_year),
-        dept: department._id
+        dept: department._id,
+        strength: { $gte: roll_no },
     });
 
     if (!classSection) {
@@ -789,7 +1068,51 @@ export const getStudentsByDept = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
-    const departmentStudents = await Student.find({ dept: department._id }).populate("user_id", "fullname email").populate("class_id", "name");
+    const departmentStudents = await Student.aggregate([
+        {
+            $match: {
+                dept: department._id
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "user_id",
+                foreignField: "_id",
+                as: "user_id"
+            }
+        },
+        {
+            $unwind: "$user_id"
+        },
+        {
+            $lookup: {
+                from: "classsections",
+                localField: "class_id",
+                foreignField: "_id",
+                as: "class_id"
+            }
+        },
+        {
+            $unwind: "$class_id"
+        },
+        {
+            $sort: {
+                academic_year: 1,
+                "class_id.name": 1,
+                roll_no: 1
+            }
+        },
+        {
+            $project: {
+                roll_no: 1,
+                academic_year: 1,
+                class_id: { name: 1 },
+                user_id: { fullname: 1, email: 1 }
+            }
+        }
+    ]);
+
     if (!Array.isArray(departmentStudents) || departmentStudents.length === 0) {
         throw new ApiError(404, "Department Faculties not found");
     }
@@ -824,11 +1147,11 @@ export const updateStudent = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
-
     const classSection = await ClassSection.findOne({
         name: class_name,
         year: getStudentYear(academic_year),
-        dept: department._id
+        dept: department._id,
+        strength: { $gte: roll_no }
     });
 
     if (!classSection) {
@@ -966,7 +1289,7 @@ export const addFaculty = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Faculty already exists");
     }
 
-    const password = department.code.toLowerCase() + "1234";
+    const password = "faculty123";
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -1115,7 +1438,8 @@ export const addSubjectFile = asyncHandler(async (req, res) => {
             subject_code: code,
             year: sub.year,
             type: sub.type,
-            dept: dept_id
+            dept: dept_id,
+            semester: sub.semester
         });
     }
 
@@ -1315,13 +1639,62 @@ export const addClass = asyncHandler(async (req, res) => {
 
     const { year, name, strength, batches } = req.body;
 
-    if (!year || !name || !strength) {
-        throw new ApiError(400, "Year, name and strength are required");
+    if (!year || !name || !strength || !Array.isArray(batches) || batches.length === 0) {
+        throw new ApiError(400, "Year, name, batches and strength are required");
     }
 
     const department = await Department.findById(dept_id);
     if (!department) {
         throw new ApiError(404, "Department not found");
+    }
+
+    const seenBatch = new Set();
+    const rangesByType = {
+        practical: [],
+        tutorial: []
+    };
+
+    for (const batch of batches) {
+        const key = `${batch.type}_${batch.code}`;
+
+        if (seenBatch.has(key)) {
+            throw new ApiError(400, "batch must have unique type_code");
+        }
+        seenBatch.add(key);
+
+        if (!["practical", "tutorial"].includes(batch.type)) {
+            throw new ApiError(
+                400,
+                "batch must have valid type (practical | tutorial)"
+            );
+        }
+
+        const { from, to } = batch.rollRange || {};
+        const fromNum = Number(from);
+        const toNum = Number(to);
+        const strengthNum = Number(strength);
+
+        if (
+            Number.isNaN(fromNum) ||
+            Number.isNaN(toNum) ||
+            fromNum >= toNum ||
+            toNum > strengthNum
+        ) {
+            throw new ApiError(400, "batch must have valid rollRange");
+        }
+
+        for (const existing of rangesByType[batch.type]) {
+            const overlap =
+                from <= existing.to && to >= existing.from;
+
+            if (overlap) {
+                throw new ApiError(
+                    400,
+                    `Overlapping roll range in ${batch.type} ${batch.code} batch (${from}-${to})`
+                );
+            }
+        }
+        rangesByType[batch.type].push({ from, to });
     }
 
     const classSection = await ClassSection.create({
@@ -1369,15 +1742,64 @@ export const updateClass = asyncHandler(async (req, res) => {
         throw new ApiError(403, "DepartmentId and ClassId are required");
     }
 
-    const { year, name, strength } = req.body;
+    const { year, name, strength, batches } = req.body;
 
-    if (!year || !name || !strength) {
-        throw new ApiError(400, "Year, name and strength are required");
+    if (!year || !name || !strength || !Array.isArray(batches) || batches.length === 0) {
+        throw new ApiError(400, "Year, name, strength and batches are required");
     }
 
     const department = await Department.findById(dept_id);
     if (!department) {
         throw new ApiError(404, "Department not found");
+    }
+
+    const seenBatch = new Set();
+    const rangesByType = {
+        practical: [],
+        tutorial: []
+    };
+
+    for (const batch of batches) {
+        const key = `${batch.type}_${batch.code}`;
+
+        if (seenBatch.has(key)) {
+            throw new ApiError(400, "batch must have unique type_code");
+        }
+        seenBatch.add(key);
+
+        if (!["practical", "tutorial"].includes(batch.type)) {
+            throw new ApiError(
+                400,
+                "batch must have valid type (practical | tutorial)"
+            );
+        }
+
+        const { from, to } = batch.rollRange || {};
+        const fromNum = Number(from);
+        const toNum = Number(to);
+        const strengthNum = Number(strength);
+
+        if (
+            Number.isNaN(fromNum) ||
+            Number.isNaN(toNum) ||
+            fromNum >= toNum ||
+            toNum > strengthNum
+        ) {
+            throw new ApiError(400, "batch must have valid rollRange");
+        }
+
+        for (const existing of rangesByType[batch.type]) {
+            const overlap =
+                from <= existing.to && to >= existing.from;
+
+            if (overlap) {
+                throw new ApiError(
+                    400,
+                    `Overlapping roll range in ${batch.type} ${batch.code} batch (${from}-${to})`
+                );
+            }
+        }
+        rangesByType[batch.type].push({ from, to });
     }
 
     const updatedClass = await ClassSection.findByIdAndUpdate(
@@ -1386,7 +1808,8 @@ export const updateClass = asyncHandler(async (req, res) => {
             $set: {
                 year,
                 name,
-                strength
+                strength,
+                batches
             }
         },
         { new: true }
@@ -1398,5 +1821,18 @@ export const updateClass = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new ApiResponse(200, updatedClass, "Successfully updated class data")
+    );
+});
+
+export const deleteClass = asyncHandler(async (req, res) => {
+    const { class_id } = req.params;
+    if (!class_id) {
+        throw new ApiError(403, "DepartmentId and ClassId are required");
+    }
+
+    await ClassSection.findByIdAndDelete(class_id);
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Successfully deleted class data")
     );
 });

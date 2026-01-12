@@ -32,6 +32,8 @@ const studentSchema = new mongoose.Schema({
     ]
 }, { timestamps: true })
 
+studentSchema.index({ class_id: 1, roll_no: 1 }, { unique: true });
+
 studentSchema.pre("deleteOne", {
     document: true, query: false
 }, async function (next) {

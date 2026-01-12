@@ -135,6 +135,7 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
         }
     ]);
 
+    console.log(subjectMappings)
     if (subjectMappings.length === 0) {
         throw new ApiError(404, "No Subjects found");
     }
@@ -358,10 +359,7 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                     form: new mongoose.Types.ObjectId(form_id)
                 }
             },
-
             { $unwind: "$ratings" },
-
-            /* Resolve Student */
             {
                 $lookup: {
                     from: "students",
@@ -371,8 +369,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                 }
             },
             { $unwind: "$student" },
-
-            /* Resolve ClassSection */
             {
                 $lookup: {
                     from: "classsections",
@@ -390,8 +386,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                 }
             },
             { $unwind: "$classSection" },
-
-            /* Convert rating safely */
             {
                 $addFields: {
                     ratingValue: {
@@ -404,8 +398,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                     }
                 }
             },
-
-            /* 1️⃣ avg rating per student per class */
             {
                 $group: {
                     _id: {
@@ -417,8 +409,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                     avgRatingPerStudent: { $avg: "$ratingValue" }
                 }
             },
-
-            /* 2️⃣ avg rating per class */
             {
                 $group: {
                     _id: "$_id.class_id",
@@ -428,7 +418,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                     avgRating: { $avg: "$avgRatingPerStudent" }
                 }
             },
-
             {
                 $project: {
                     _id: 0,
@@ -438,7 +427,6 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                     avgRating: { $round: ["$avgRating", 2] }
                 }
             },
-
             {
                 $sort: {
                     class_year: 1,

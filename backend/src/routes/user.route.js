@@ -6,12 +6,12 @@ import {
     loginUser,
     logoutUser,
     refreshAccessToken,
-    registerAdmin,
+    registerInstitute,
     updatePassword
 } from "../controllers/user.controller.js";
 const router = Router();
 
-router.route("/register").post(registerAdmin);
+router.route("/register").post(registerInstitute);
 router.route("/login").post(loginUser);
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/update-password").post(verifyJWT, updatePassword);

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js"
@@ -5,16 +6,25 @@ import { ApiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
 import { Student } from "../models/student.model.js"
 import { Faculty } from "../models/faculty.model.js";
-import { accessTokenExpiry, refreshTokenExpiry, COOKIE_OPTIONS } from "../constants.js";
 import { Admin } from "../models/admin.model.js";
-import mongoose from "mongoose";
+import { Institute } from "../models/institute.model.js";
+import { accessTokenExpiry, refreshTokenExpiry, COOKIE_OPTIONS } from "../constants.js";
 
-export const registerAdmin = asyncHandler(async (req, res) => {
-    const { fullname, email, password, role } = req.body;
+export const registerInstitute = asyncHandler(async (req, res) => {
+    const {
+        instituteName,
+        instituteCode,
+        emailDomain,
+        fullname,
+        email,
+        password
+    } = req.body;
 
-    if ([fullname, email, password, role].some(
-        (field) => !field || field.trim() === ""
-    )) {
+    if (
+        [instituteName, instituteCode, fullname, email, password].some(
+            (f) => !f || f.trim() === ""
+        )
+    ) {
         throw new ApiError(400, "All fields are required");
     }
 
@@ -23,22 +33,47 @@ export const registerAdmin = asyncHandler(async (req, res) => {
         throw new ApiError(409, "User already exists");
     }
 
+    const existedInstitute = await Institute.findOne({
+        $or: [
+            { name: instituteName },
+            { code: instituteCode },
+            emailDomain ? { emailDomain } : null
+        ].filter(Boolean)
+    });
+
+    if (existedInstitute) {
+        throw new ApiError(409, "Institute already exists");
+    }
+
     const session = await mongoose.startSession();
 
     try {
         session.startTransaction();
+
+        const institute = await Institute.create(
+            [{
+                name: instituteName,
+                code: instituteCode,
+                emailDomain,
+            }],
+            { session }
+        );
+
         const user = await User.create(
             [{
                 fullname,
                 email,
                 password,
-                role
+                role: "admin",
             }],
             { session }
         );
+
         await Admin.create(
             [{
-                user_id: user[0]._id
+                institute: institute[0]._id,
+                user_id: user[0]._id,
+                permission: "institute",
             }],
             { session }
         );
@@ -54,29 +89,18 @@ export const registerAdmin = asyncHandler(async (req, res) => {
 
         const loggedInUser = await User.findById(user[0]._id)
             .select("-password -refreshToken");
-
-        return res
-            .status(201)
-            .cookie("accessToken", accessToken, {
-                ...COOKIE_OPTIONS,
-                maxAge: accessTokenExpiry,
-            })
-            .cookie("refreshToken", refreshToken, {
-                ...COOKIE_OPTIONS,
-                maxAge: refreshTokenExpiry,
-            })
+        
+        return res.status(201)
+            .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
+            .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
             .json(
-                new ApiResponse(
-                    201,
-                    { admin: loggedInUser },
-                    "Admin registered successfully"
-                )
+                new ApiResponse(201, { user: loggedInUser, }, "Institute registered successfully")
             );
-
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        throw new ApiError(500, "Failed to create user");
+        console.error("registerInstitute :: error", error);
+        throw new ApiError(500, "Institute registration failed");
     }
 });
 

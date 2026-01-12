@@ -11,6 +11,7 @@ const subjectSchema = new mongoose.Schema({
     },
     subject_code: {
         type: String,
+        unique: true,
         required: true,
     },
     year: {

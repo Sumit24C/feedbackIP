@@ -15,6 +15,11 @@ const departmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Faculty",
     },
+    institute: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Institute",
+        required: true,
+    },
     isConfigured: {
         type: Boolean,
         default: false

@@ -5,7 +5,7 @@ import { FacultySubject } from "../models/faculty_subject.model.js";
 import { Attendance } from "../models/attendance.model.js";
 import { Faculty } from "../models/faculty.model.js";
 import { Student } from "../models/student.model.js";
-import { getStudentAcademicYear } from "../utils/getStudentAcademicYear.js";
+import { getStudentAcademicYear } from "../utils/student.utils.js";
 import mongoose from "mongoose";
 import { getCurrentSemester } from "../utils/subject.utils.js";
 
