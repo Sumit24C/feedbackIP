@@ -1,112 +1,199 @@
 ---
 
-# College Feedback System
+# ClassSetu
 
-A web-based platform to streamline feedback collection from students about faculty, courses, and infrastructure. The system is department-centric and supports automated form creation, responses, and reporting.
+### Institute-Scale Feedback & Attendance Management System
 
----
-
-## **Overview**
-
-The College Feedback System allows administrators and faculty to:
-
-* Create departments and manage students/faculty.
-* Define feedback forms (theory, practical, infrastructure).
-* Map subjects to faculty and classes.
-* Collect structured feedback from students.
-* Generate analytics for evaluation and reporting.
+ClassSetu is a modern, scalable **academic management platform** designed to handle **feedback collection, attendance tracking, and faculty evaluation** across institutes.
+It follows a clean **Institute → Department → Class** hierarchy and is built to support real-world academic workflows with strong data integrity.
 
 ---
 
-## **Features**
+## Overview
 
-* Admin panel to manage departments, students, and faculty.
-* Dynamic form creation with question templates allow reusability across forms.
-* Department-centric feedback forms ensure students see only relevant subjects.
-* Subject mapping for faculty per class/section.
-* JWT-based authentication and role-based access control.
-* Automated password hashing and secure login.
-* Continuous feedback form UI for multiple subjects.
-* Response storage mapped to question templates for analytics.
+ClassSetu enables institutes to:
 
----
+* Manage institutes, departments, classes, students, and faculty
+* Map faculty to subjects, classes, and batches
+* Conduct **attendance tracking** (session-based, editable)
+* Create and distribute **feedback forms** at class, department, or institute level
+* Collect structured responses and generate analytics
+* Enforce strict role-based access and data isolation per institute
 
-## **Tech Stack**
-
-* **Backend:** Node.js, Express.js
-* **Database:** MongoDB
-* **Authentication:** JWT, bcrypt
-* **Frontend:** React.js, TailwindCSS, Axios
+The system is designed to scale from a **single department** to **multiple institutes** within one deployment.
 
 ---
 
-## **Database Schema**
+## Core Architecture
 
-* **users:** All users (students, faculty, admin).
-* **students:** Student-specific info, linked to users.
-* **faculty:** Faculty-specific info, linked to users.
-* **departments:** Dept info with HOD reference.
-* **subject_mapping:** Class, subject, faculty, and type.
-* **feedback_forms:** Form info with selected question templates.
-* **feedback_responses:** Stores student responses mapped to subjects and questions.
+```
+Institute
+ └── Department
+      └── Class (Section)
+           ├── Students
+           ├── Faculty
+           └── FacultySubject (Theory / Practical / Tutorial)
+```
+
+All critical workflows (attendance, feedback, analytics) are anchored to **FacultySubject**, ensuring consistency across the system.
 
 ---
 
-## **Setup & Installation**
+## Key Features
+
+### Institute & Department Management
+
+* Multi-institute support
+* Institute-based admin roles
+* Email-domain based institute identity
+* Safe cascade deletion using MongoDB transactions
+
+### Faculty–Subject Mapping
+
+* Dedicated `FacultySubject` model
+* Supports:
+
+  * Theory / Practical / Tutorial
+  * Batch-wise allocation
+  * Class-wise mapping
+* Single source of truth for attendance & feedback
+
+### Feedback System
+
+* Dynamic feedback form creation
+* Reusable question templates
+* Form targeting:
+
+  * CLASS
+  * DEPARTMENT
+  * INSTITUTE
+* Continuous feedback UI for multiple subjects
+* Secure response storage for analytics
+
+### Attendance Management
+
+* Session-based attendance
+* Edit & delete past sessions
+* Batch-aware attendance
+* Automatic attendance percentage calculation
+* Pagination support for large classes
+
+### Authentication & Authorization
+
+* JWT-based authentication
+* Refresh token support
+* Role-based access control
+* Institute-level data isolation
+* Secure password hashing
+
+### Data Integrity & Safety
+
+* Transaction-based deletes
+* No orphaned records
+* Strict authorization checks
+* Controlled cascading across models
+
+---
+
+## Tech Stack
 
 ### Backend
 
-1. **Clone the repository:**
+* Node.js
+* Express.js
+* MongoDB (Mongoose)
+* JWT Authentication
+* bcrypt
+
+### Frontend
+
+* React.js
+* TailwindCSS
+* Axios
+* React Hook Form
+* Redux Toolkit
+
+---
+
+## Database Models
+
+```
+* User – All users (admin, faculty, student)
+* OAuth – External authentication provider mappings (Google, etc.)
+* Institute – Institute-level identity & configuration
+* Department – Belongs to an institute
+* Admin – Institute / department scoped admin
+* Student – Student profile linked to user
+* Faculty – Faculty profile linked to user
+* ClassSection – Academic year + section
+* Subject – Academic subject metadata
+* FacultySubject – Faculty ↔ Subject ↔ Class ↔ Form type mapping
+* Form – Feedback form metadata and targeting
+* Question – Reusable question templates
+* Response – Student feedback responses
+* Attendance – Session-based attendance records
+```
+
+---
+
+## Setup & Installation
+
+### Backend Setup
 
 ```bash
 git clone https://github.com/Sumit24C/feedbackIP
 cd feedbackIP/backend
-```
-
-2. **Install dependencies:**
-
-```bash
 npm install
 ```
 
-3. **Create `.env` file** with required variables:
+Create a `.env` file:
 
-```
-MONGO_URI=your_mongodb_connection
+```env
+# Server
+PORT=8000
+NODE_ENV=production
+
+# Database
+MONGO_URI=your_mongodb_connection_string
+
+# JWT Authentication
 ACCESS_TOKEN_SECRET=your_access_token_secret
 REFRESH_TOKEN_SECRET=your_refresh_token_secret
 ACCESS_TOKEN_EXPIRY=3600
 REFRESH_TOKEN_EXPIRY=86400
-CORS_ORIGIN=http://localhost:3000
+
+# CORS
+CORS_ORIGIN=http://localhost:5173
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
 ```
 
-4. **Start the server:**
+Start backend:
 
 ```bash
 npm run dev
 ```
 
-### Frontend
+---
 
-1. Navigate to the frontend folder:
-
-```bash
-cd frontend
-```
-
-2. Install frontend dependencies:
+### Frontend Setup
 
 ```bash
+cd feedbackIP/frontend
 npm install
-```
-
-3. Start the development server:
-
-```bash
 npm run dev
 ```
 
-4. Open your browser at:
+Create a `.env` file:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+```
+
+Open browser:
 
 ```
 http://localhost:5173
@@ -114,13 +201,16 @@ http://localhost:5173
 
 ---
 
-## **Usage Workflow**
+## Usage Workflow
 
-1. Admin creates **departments**.
-2. Admin uploads **students and faculty** via Excel or manually.
-3. Faculty is mapped to **subjects and classes**.
-4. Admin/faculty creates **feedback forms** using question templates.
-5. Students login and fill feedback forms for all subjects at once.
-6. Responses are stored and can be viewed by **faculty/admin**.
+1. **Institute Admin registers institute**
+2. Admin creates **departments**
+3. Admin uploads **students & faculty** (Excel or manual)
+4. Admin creates **classes and batches**
+5. Faculty is mapped to **subjects & classes**
+6. Faculty manages **attendance**
+7. Admin/Faculty creates **feedback forms**
+8. Students submit feedback
+9. Admin & faculty analyze results
 
 ---
