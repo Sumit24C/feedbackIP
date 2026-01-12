@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import {  useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
@@ -52,7 +52,7 @@ function FormContainer({
     });
 
     useEffect(() => {
-        if (!form_id) return;
+        if (!form_id || submitAction !== "update") return;
 
         (async () => {
             setLoadingForm(true);
@@ -70,7 +70,7 @@ function FormContainer({
 
                 setFormType(form.formType);
                 setTargetType(form.targetType);
-                setSelectedClasses(form.facultySubject);
+                setSelectedClasses(form.facultySubject.map(id => id.toString()));
 
                 setQuestions(
                     form.questions.map((q) => ({

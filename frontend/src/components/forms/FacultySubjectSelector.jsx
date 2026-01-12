@@ -81,8 +81,12 @@ function FacultySubjectSelector({
         if (formType === "infrastructure") {
             setTargetType("DEPARTMENT");
         }
-        setSelectedClasses([]);
-    }, [formType]);
+
+        if (!form_id) {
+            setSelectedClasses([]);
+        }
+    }, [formType, form_id]);
+
 
     return (
         <div className="w-full">
