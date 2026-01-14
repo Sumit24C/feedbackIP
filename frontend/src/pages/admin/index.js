@@ -7,6 +7,7 @@ import FacultyTab from "./FacultyTab";
 import SubjectTab from "./SubjectTab";
 import ClassTab from "./ClassTab";
 import FacultySubjectTab from "./FacultySubjectTab";
+import ElectiveTab from "./ElectiveTab";
 
 export {
     CreateDepartment,
@@ -17,4 +18,5 @@ export {
     SubjectTab,
     ClassTab,
     FacultySubjectTab,
+    ElectiveTab
 }

@@ -7,6 +7,7 @@ import { Response } from "../models/response.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
 import { getClassSection, getStudentYear, resolveBatchCodes, resolveBatchCodeByType } from "../utils/student.utils.js"
+import { ElectiveEnrollment } from "../models/elective_enrollment.model.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id, fs_id } = req.params;
@@ -80,7 +81,7 @@ export const getFormById = asyncHandler(async (req, res) => {
 
     let entities = [];
     if (form.targetType === "DEPARTMENT") {
-        const facultySubjects = await FacultySubject.find(query)
+        const coreFacultySubjects = await FacultySubject.find(query)
             .populate({
                 path: "faculty",
                 select: "_id user_id",
@@ -88,22 +89,53 @@ export const getFormById = asyncHandler(async (req, res) => {
                     path: "user_id",
                     select: "fullname"
                 }
-            })
-            .populate("class_id", "name")
-            .populate("subject")
-            .select("subject class_id faculty")
+            }).populate("class_id", "name")
+            .populate("subject", "name")
             .lean();
+
+        const electiveEnrollments = await ElectiveEnrollment.find({
+            student: student._id
+        }).populate({
+            path: "facultySubject",
+            populate: [
+                {
+                    path: "faculty",
+                    select: "user_id",
+                    populate: {
+                        path: "user_id",
+                        select: "fullname"
+                    }
+                },
+                {
+                    path: "subject",
+                    select: "name type"
+                },
+                {
+                    path: "class_id",
+                    select: "name"
+                }
+            ]
+        }).lean();
+
+        const electiveFacultySubjects = electiveEnrollments
+            .map(e => e.facultySubject)
+            .filter(Boolean);
+
+        const facultySubjects = [
+            ...coreFacultySubjects,
+            ...electiveFacultySubjects
+        ];
 
         entities = facultySubjects.map((fs) => ({
             _id: fs._id,
             facultyId: fs.faculty?._id,
             facultyName: fs.faculty?.user_id?.fullname,
             subject: fs.subject.name,
-            batch_code: fs.batch_code,
-            class_name: fs.class_id.name,
+            batch_code: fs.subject.type === "elective" ? null : fs.batch_code,
         }));
 
     } else {
+
         const fs = await FacultySubject.findById(fs_id)
             .populate({
                 path: "faculty",
@@ -114,17 +146,30 @@ export const getFormById = asyncHandler(async (req, res) => {
                 }
             })
             .populate("class_id", "name")
-            .populate("subject")
-            .select("subject class_id faculty")
+            .populate("subject", "name type")
             .lean();
+
+        if (!fs) {
+            throw new ApiError(404, "FacultySubject not found");
+        }
+        const isElective = fs.subject.type === "elective"
+        if (isElective) {
+            const enrolled = await ElectiveEnrollment.exists({
+                student: student._id,
+                facultySubject: fs._id
+            });
+            if (!enrolled) {
+                throw new ApiError(403, "You are not enrolled in this elective");
+            }
+        }
 
         entities = [{
             _id: fs_id,
             facultyId: fs.faculty?._id,
             facultyName: fs.faculty?.user_id?.fullname,
             subject: fs.subject.name,
-            batch_code: fs.batch_code,
-            class_name: fs.class_id.name,
+            batch_code: !isElective ? fs?.batch_code : null,
+            class_name: !isElective ? fs?.class_id?.name : student?.class_id?.name,
         }];
     }
 
@@ -151,26 +196,41 @@ export const getForms = asyncHandler(async (req, res) => {
         student.roll_no
     );
 
-    const query = {
+    const coreFacultySubjects = await FacultySubject.find({
         class_id: student.class_id._id,
-        $or: [
-            { formType: "theory" },
-            ...batchMap,
-        ],
-    };
+        $or: [{ formType: "theory" }, ...batchMap],
+    }).populate({
+        path: "subject",
+        match: { type: "dept" },
+        select: "name type"
+    }).populate({
+        path: "faculty",
+        select: "user_id",
+        populate: { path: "user_id", select: "fullname" }
+    });
 
-    const studentFacultySubjects = await FacultySubject.find(query)
-        .select("_id faculty formType batch_code")
-        .populate({
+    const electiveEnrollments = await ElectiveEnrollment.find({
+        student: student._id
+    }).populate({
+        path: "facultySubject",
+        populate: {
             path: "faculty",
             select: "user_id",
-            populate: {
-                path: "user_id",
-                select: "fullname",
-            },
-        });
+            populate: { path: "user_id", select: "fullname" }
+        }
+    });
+
+    const electiveFacultySubjects = electiveEnrollments
+        .map(e => e.facultySubject)
+        .filter(Boolean);
+
+    const studentFacultySubjects = [
+        ...coreFacultySubjects,
+        ...electiveFacultySubjects
+    ];
 
     const studentFacultySubjectIds = studentFacultySubjects.map((fs) => fs._id.toString());
+
     const forms = await Form.find({
         $or: [
             {

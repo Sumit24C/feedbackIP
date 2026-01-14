@@ -10,18 +10,21 @@ function StudentTab() {
   const axiosPrivate = useAxiosPrivate();
   const [students, setStudents] = useState([]);
   const [open, setOpen] = useState(false);
-  const [uploadMode, setUploadMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [yearFilter, setYearFilter] = useState("SY");
 
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const isEditing = (id) => editingId === id;
   const fetchStudents = async () => {
+    setLoading(true)
     try {
-      const res = await axiosPrivate.get(`/admin/students/${dept_id}`);
+      const res = await axiosPrivate.get(`/admin/students/${dept_id}?year=${yearFilter}`);
       setStudents(res.data.data);
     } catch (error) {
       console.error(`student :: error :: ${extractErrorMsg(error)}`);
+      toast.error(extractErrorMsg(error) || "Student not found");
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -29,7 +32,7 @@ function StudentTab() {
 
   useEffect(() => {
     fetchStudents();
-  }, [dept_id]);
+  }, [dept_id, yearFilter]);
 
   const handleCreate = async (data) => {
     if (data.roll_no < 1 || data.roll_no > 100) {
@@ -65,10 +68,11 @@ function StudentTab() {
     setLoading(true);
     try {
       const res = await axiosPrivate.post(`/admin/add-students/${dept_id}`, formData);
-      toast.success(res.data.message || "Students uploaded");
+      const { inserted, skipped } = res.data.data;
+      toast.success(`inserted: ${inserted}, skipped: ${skipped}` || "Students uploaded");
     } catch (error) {
       console.error(extractErrorMsg(error));
-      toast.error(extractErrorMsg(error));
+      toast.error(extractErrorMsg(error) || "failed to upload students");
     } finally {
       setLoading(false)
     }
@@ -117,20 +121,33 @@ function StudentTab() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setOpen(true);
-            setUploadMode(false);
-          }}
-          className="
-              inline-flex items-center gap-2
-              px-4 py-2 rounded-lg
-              bg-blue-600 text-white text-sm font-semibold
-              hover:bg-blue-700 transition
-            "
-        >
-          Add Students
-        </button>
+        <div className="flex flex-col sm:flex-row justify-end sm:justify-center items-end sm:items-center gap-1">
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="border rounded px-3 py-2 text-sm w-40"
+          >
+            <option value="">All Years</option>
+            <option value="FY">FY</option>
+            <option value="SY">SY</option>
+            <option value="TY">TY</option>
+            <option value="BY">Final Year</option>
+          </select>
+
+          <button
+            onClick={() => {
+              setOpen(true);
+            }}
+            className="
+          inline-flex items-center gap-2
+          px-4 py-2 rounded-lg
+          bg-blue-600 text-white text-sm font-semibold
+          hover:bg-blue-700 transition
+          "
+          >
+            Add Students
+          </button>
+        </div>
 
       </div>
 

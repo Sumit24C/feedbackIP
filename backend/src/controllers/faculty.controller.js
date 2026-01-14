@@ -17,30 +17,29 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
     if (!faculty) {
         throw new ApiError(404, "Faculty not found");
     }
+
     const { form_id } = req.params;
     const form = await Form.findById(form_id);
-
     if (!form) {
         throw new ApiError(404, "Form not found");
     }
 
-    let obj = [];
-    if (form.targetType === "CLASS" && form.facultySubject && form.facultySubject.length > 0) {
-        obj = {
-            _id: { $in: form.facultySubject }
-        }
+    let matchObj = {};
+    if (
+        form.targetType === "CLASS" &&
+        form.facultySubject &&
+        form.facultySubject.length > 0
+    ) {
+        matchObj = { _id: { $in: form.facultySubject } };
     } else {
-        obj = {
+        matchObj = {
             faculty: faculty._id,
             formType: form.formType
-        }
+        };
     }
 
-
     const subjectMappings = await FacultySubject.aggregate([
-        {
-            $match: obj
-        },
+        { $match: matchObj },
         {
             $lookup: {
                 from: "classsections",
@@ -55,11 +54,7 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
                             foreignField: "_id",
                             as: "department",
                             pipeline: [
-                                {
-                                    $project: {
-                                        code: 1
-                                    }
-                                }
+                                { $project: { code: 1 } }
                             ]
                         }
                     },
@@ -74,7 +69,12 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
                 ]
             }
         },
-        { $unwind: "$class_id" },
+        {
+            $unwind: {
+                path: "$class_id",
+                preserveNullAndEmptyArrays: true
+            }
+        },
         {
             $lookup: {
                 from: "subjects",
@@ -90,13 +90,15 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
                     {
                         $project: {
                             name: 1,
-                            subject_code: 1
+                            subject_code: 1,
+                            type: 1,
+                            year: 1
                         }
                     }
                 ]
             }
         },
-        { $unwind: { path: "$subject", preserveNullAndEmptyArrays: false } },
+        { $unwind: "$subject" },
         {
             $lookup: {
                 from: "responses",
@@ -104,17 +106,8 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
                 foreignField: "facultySubject",
                 as: "responses",
                 pipeline: [
-                    {
-                        $match: {
-                            form: form._id
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 1,
-                            form: 1
-                        }
-                    }
+                    { $match: { form: form._id } },
+                    { $project: { _id: 1 } }
                 ]
             }
         },
@@ -125,23 +118,44 @@ export const getSubjectMapping = asyncHandler(async (req, res) => {
         },
         {
             $project: {
-                class_name: "$class_id.name",
-                class_year: "$class_id.year",
-                batch_code: 1,
-                department: "$class_id.department",
                 subject: "$subject.subject_code",
-                totalResponses: 1
+                batch_code: 1,
+                totalResponses: 1,
+                class_name: {
+                    $cond: [
+                        { $eq: ["$subject.type", "elective"] },
+                        "Elective",
+                        "$class_id.name"
+                    ]
+                },
+                class_year: {
+                    $cond: [
+                        { $eq: ["$subject.type", "elective"] },
+                        "$subject.year",
+                        "$class_id.year"
+                    ]
+                },
+                department: {
+                    $cond: [
+                        { $eq: ["$subject.type", "elective"] },
+                        "$subject.type",
+                        "$class_id.department"
+                    ]
+                }
             }
         }
     ]);
 
-    console.log(subjectMappings)
     if (subjectMappings.length === 0) {
         throw new ApiError(404, "No Subjects found");
     }
 
     return res.status(200).json(
-        new ApiResponse(200, subjectMappings, "successfully fetched subjects mapping")
+        new ApiResponse(
+            200,
+            subjectMappings,
+            "Successfully fetched subjects mapping"
+        )
     );
 });
 
@@ -261,8 +275,8 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
             {
                 $match: {
                     form: new mongoose.Types.ObjectId(form_id),
-                    facultySubject: { $in: facultySubjectIds },
-                },
+                    facultySubject: { $in: facultySubjectIds }
+                }
             },
             {
                 $lookup: {
@@ -273,24 +287,42 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                     pipeline: [
                         {
                             $lookup: {
+                                from: "subjects",
+                                localField: "subject",
+                                foreignField: "_id",
+                                as: "subject",
+                                pipeline: [
+                                    { $project: { subject_code: 1, type: 1, year: 1 } }
+                                ]
+                            }
+                        },
+                        { $unwind: "$subject" },
+                        {
+                            $lookup: {
                                 from: "classsections",
                                 localField: "class_id",
                                 foreignField: "_id",
                                 as: "classSection",
                                 pipeline: [
-                                    {
-                                        $project: { name: 1, year: 1 }
-                                    }
+                                    { $project: { name: 1, year: 1 } }
                                 ]
                             }
                         },
-                        { $unwind: "$classSection" },
+                        {
+                            $unwind: {
+                                path: "$classSection",
+                                preserveNullAndEmptyArrays: true
+                            }
+                        },
                         {
                             $project: {
+                                subject_year: "$subject.year",
+                                subject_type: "$subject.type",
+                                subject_code: "$subject.subject_code",
+                                batch_code: 1,
                                 class_id: "$classSection._id",
                                 class_name: "$classSection.name",
-                                class_year: "$classSection.year",
-                                batch_code: 1
+                                class_year: "$classSection.year"
                             }
                         }
                     ]
@@ -305,51 +337,74 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                             input: "$ratings.answer",
                             to: "double",
                             onError: null,
-                            onNull: null,
-                        },
-                    },
-                },
+                            onNull: null
+                        }
+                    }
+                }
             },
             {
                 $group: {
                     _id: {
-                        class_id: "$facultySubject.class_id",
                         student: "$student",
+                        key: {
+                            $cond: [
+                                { $eq: ["$facultySubject.subject_type", "elective"] },
+                                "$facultySubject._id",     
+                                "$facultySubject.class_id"
+                            ]
+                        }
                     },
+                    subject_type: { $first: "$facultySubject.subject_type" },
+                    subject_year: { $first: "$facultySubject.subject_year" },
+                    subject_code: { $first: "$facultySubject.subject_code" },
                     class_name: { $first: "$facultySubject.class_name" },
                     class_year: { $first: "$facultySubject.class_year" },
                     batch_code: { $first: "$facultySubject.batch_code" },
-                    avgRatingPerStudent: { $avg: "$ratingValue" },
-                },
+                    avgRatingPerStudent: { $avg: "$ratingValue" }
+                }
             },
             {
                 $group: {
-                    _id: {
-                        class_id: "$_id.class_id",
-                    },
+                    _id: "$_id.key",
+                    subject_type: { $first: "$subject_type" },
+                    subject_year: { $first: "$subject_year" },
+                    subject_code: { $first: "$subject_code" },
                     class_name: { $first: "$class_name" },
                     class_year: { $first: "$class_year" },
                     batch_code: { $first: "$batch_code" },
                     totalResponses: { $sum: 1 },
-                    avgRating: { $avg: "$avgRatingPerStudent" },
-                },
+                    avgRating: { $avg: "$avgRatingPerStudent" }
+                }
             },
             {
                 $project: {
                     _id: 0,
-                    class_name: 1,
-                    class_year: 1,
-                    batch_code: 1,
                     totalResponses: 1,
                     avgRating: { $round: ["$avgRating", 2] },
-                },
+
+                    class_name: {
+                        $cond: [
+                            { $eq: ["$subject_type", "elective"] },
+                            "$subject_code",
+                            "$class_name"
+                        ]
+                    },
+                    class_year: {
+                        $cond: [
+                            { $eq: ["$subject_type", "elective"] },
+                            "$subject_year",
+                            "$class_year"
+                        ]
+                    },
+                    batch_code: 1
+                }
             },
             {
                 $sort: {
                     class_year: 1,
-                    class_name: 1,
-                },
-            },
+                    class_name: 1
+                }
+            }
         ]);
     } else {
         overallSummary = await Response.aggregate([

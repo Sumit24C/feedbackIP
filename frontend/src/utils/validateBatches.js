@@ -6,6 +6,9 @@ export function validateBatches(batches, strength) {
     };
 
     const strengthNum = Number(strength);
+    if (strengthNum <= 0 || strengthNum >= 100) {
+        return "Class must have valid strength min=0 and max=100";
+    }
 
     for (const batch of batches) {
         const key = `${batch.type}_${batch.code}`;

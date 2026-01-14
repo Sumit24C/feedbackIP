@@ -76,10 +76,9 @@ function StudentProfilePage() {
 
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ProfileField label="Roll Number" value={profileInfo.roll_no} />
-          <ProfileField label="Class Section" value={profileInfo.classSection} />
+          <ProfileField label="Class Section" value={`${profileInfo?.class_id?.year}-${profileInfo?.class_id?.name}`} />
           <ProfileField label="Academic Year" value={profileInfo.academic_year} />
           <ProfileField label="Department" value={profileInfo.dept?.name} />
-          <ProfileField label="User ID" value={profileInfo.user_id} />
         </CardContent>
 
         <div className="p-4">

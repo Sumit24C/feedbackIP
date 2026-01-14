@@ -168,13 +168,21 @@ export const ENTITY_CONFIG = {
           name: "from",
           label: "Roll From",
           type: "number",
-          rules: { required: true },
+          rules: {
+            required: "Roll From is required",
+            min: { value: 1, message: "Roll From must be at least 1" },
+            max: { value: 100, message: "Roll From cannot exceed 100" },
+          },
         },
         {
           name: "to",
           label: "Roll To",
           type: "number",
-          rules: { required: true },
+          rules: {
+            required: "Roll To is required",
+            min: { value: 1, message: "Roll To must be at least 1" },
+            max: { value: 100, message: "Roll To cannot exceed 100" },
+          },
         },
       ],
     },
@@ -223,6 +231,23 @@ export const ENTITY_CONFIG = {
         type: "select",
         options: ["theory", "practical", "tutorial"],
         rules: { required: true },
+      },
+    ],
+  },
+
+  electives: {
+    title: "Add Electives",
+    uploadTitle: "Upload Electives Students",
+    uploadAccept: ".xlsx,.xls",
+    fields: [
+      {
+        name: "email",
+        label: "Email",
+        type: "email",
+        rules: {
+          required: true,
+          pattern: /^\S+@\S+$/i,
+        },
       },
     ],
   },

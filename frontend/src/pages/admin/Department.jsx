@@ -54,6 +54,7 @@ function DepartmentLayout() {
                         { to: "faculties", label: "Faculties" },
                         { to: "subjects", label: "Subjects" },
                         { to: "faculty-subjects", label: "Faculty-Subjects" },
+                        { to: "electives", label: "Electives" },
                     ].map((tab) => (
                         <NavLink
                             key={tab.label}

@@ -8,7 +8,7 @@ import {
     RegisterInstitute
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
-import { CreateDepartment, Department, DepartmentList, StudentTab, FacultyTab, SubjectTab, ClassTab, FacultySubjectTab } from './pages/admin'
+import { CreateDepartment, Department, DepartmentList, StudentTab, FacultyTab, SubjectTab, ClassTab, FacultySubjectTab, ElectiveTab } from './pages/admin'
 import { AttendanceList, FeedbackForm, FeedbackFormList, StudentProfilePage, SubjectAttendance } from './pages/student'
 import { FacultyProfilePage, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse } from './pages/forms'
@@ -31,6 +31,7 @@ function AppRouter() {
                                 <Route path="subjects" element={<SubjectTab />} />
                                 <Route path="classess" element={<ClassTab />} />
                                 <Route path='faculty-subjects' element={<FacultySubjectTab />} />
+                                <Route path='electives' element={<ElectiveTab />} />
                             </Route>
                         </Route>
 

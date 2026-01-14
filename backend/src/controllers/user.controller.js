@@ -89,7 +89,7 @@ export const registerInstitute = asyncHandler(async (req, res) => {
 
         const loggedInUser = await User.findById(user[0]._id)
             .select("-password -refreshToken");
-        
+
         return res.status(201)
             .cookie("accessToken", accessToken, { ...COOKIE_OPTIONS, maxAge: accessTokenExpiry })
             .cookie("refreshToken", refreshToken, { ...COOKIE_OPTIONS, maxAge: refreshTokenExpiry })
@@ -115,7 +115,7 @@ export const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User not found");
     }
 
-    const isPasswordCorrect = await user.isPasswordCorrect(password, user.password);
+    const isPasswordCorrect = await user.isPasswordCorrect(password);
     if (!isPasswordCorrect) {
         throw new ApiError(403, "Invalid credentials");
     }
@@ -208,7 +208,7 @@ export const getProfileInfo = asyncHandler(async (req, res) => {
     const userRole = req.user.role;
     let user;
     if (userRole === "student") {
-        user = await Student.findOne({ user_id: req.user._id }).populate("dept", "name");
+        user = await Student.findOne({ user_id: req.user._id }).populate("dept", "name").populate("class_id", "year name");
     } else if (userRole === "faculty") {
         user = await Faculty.findOne({ user_id: req.user._id }).populate("dept", "name");
     }

@@ -15,8 +15,9 @@ import { Subject } from "../models/subject.model.js";
 import { OAuth } from "../models/oauth.model.js";
 import { Attendance } from "../models/attendance.model.js"
 import { ClassSection } from "../models/class_section.model.js";
-import { getStudentYear } from "../utils/student.utils.js";
+import { getStudentAcademicYear, getStudentYear } from "../utils/student.utils.js";
 import { Admin } from "../models/admin.model.js";
+import { ElectiveEnrollment } from "../models/elective_enrollment.model.js";
 
 //department controllers
 export const createDepartment = asyncHandler(async (req, res) => {
@@ -40,7 +41,7 @@ export const createDepartment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Excel of faculty, class and subject is required");
     }
 
-    const password = "faculty123";
+    const password = process.env.FACULTY_PASSWORD || "faculty123";
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
@@ -168,7 +169,9 @@ export const createDepartment = asyncHandler(async (req, res) => {
                 `Email already exists: ${error.keyValue.email}`
             );
         }
-        console.error("Failed Full Creation:", error);
+        if (error instanceof ApiError) {
+            throw error
+        }
         throw new ApiError(500, "Failed to create department with full data");
     } finally {
         // if (facultyExcel?.path) await fs.unlink(facultyExcel.path);
@@ -532,7 +535,9 @@ export const deleteDepartment = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.error("deleteDepartment :: error :: ", error);
+        if (error instanceof ApiError) {
+            throw error
+        }
         throw new ApiError(500, "Something went wrong while deleting");
     }
 });
@@ -687,6 +692,7 @@ export const uploadFacultySubjects = asyncHandler(async (req, res) => {
 
 export const getFacultySubjectsByDepartmentId = asyncHandler(async (req, res) => {
     const { dept_id } = req.params;
+    const { type } = req.query;
 
     if (!dept_id) {
         throw new ApiError(400, "DepartmentId is required");
@@ -697,45 +703,70 @@ export const getFacultySubjectsByDepartmentId = asyncHandler(async (req, res) =>
         throw new ApiError(404, "Department not found");
     }
 
-    const classes = await ClassSection.find({ dept: dept_id }).select("_id");
+    let facultySubjects = [];
 
-    if (classes.length === 0) {
-        return res.status(200).json(
-            new ApiResponse(200, [], "No classes found for this department")
-        );
+    if (type === "elective") {
+        facultySubjects = await FacultySubject.find({
+            class_id: null
+        })
+            .select("formType subject faculty")
+            .populate({
+                path: "subject",
+                match: { type: "elective" },
+                select: "name subject_code type"
+            })
+            .populate({
+                path: "faculty",
+                populate: {
+                    path: "user_id",
+                    select: "email fullname"
+                },
+            });
+    } else {
+        const classes = await ClassSection.find({ dept: dept_id }).select("_id");
+        if (!classes.length) {
+            return res.status(200).json(
+                new ApiResponse(200, [], "No classes found for this department")
+            );
+        }
+
+        const classIds = classes.map(c => c._id);
+        facultySubjects = await FacultySubject.find({
+            $or: [
+                {
+                    class_id: { $in: classIds }
+                },
+                { class_id: null }
+            ]
+        })
+            .select("formType batch_code class_id subject faculty")
+            .populate({
+                path: "class_id",
+                select: "name year",
+                populate: {
+                    path: "dept",
+                    select: "name code"
+                }
+            })
+            .populate({
+                path: "subject",
+                select: "name subject_code type"
+            })
+            .populate({
+                path: "faculty",
+                populate: {
+                    path: "user_id",
+                    select: "email fullname"
+                },
+            });
     }
 
-    const classIds = classes.map(c => c._id);
-
-    const facultySubjects = await FacultySubject.find({
-        class_id: { $in: classIds }
-    })
-        .select("formType batch_code class_id subject faculty")
-        .populate({
-            path: "class_id",
-            select: "name year",
-            populate: {
-                path: "dept",
-                select: "name code"
-            }
-        })
-        .populate({
-            path: "subject",
-            select: "name subject_code"
-        })
-        .populate({
-            path: "faculty",
-            populate: {
-                path: "user_id",
-                select: "email"
-            },
-        });
-
+    facultySubjects = facultySubjects.filter(fs => fs.subject !== null);
     return res.status(200).json(
         new ApiResponse(
             200,
             facultySubjects,
-            "FacultySubject fetched successfully"
+            "FacultySubjects fetched successfully"
         )
     );
 });
@@ -760,7 +791,7 @@ export const getFacultySubjectMeta = asyncHandler(async (req, res) => {
         .select("_id user_id");
 
     const subjects = await Subject.find({ dept: dept_id })
-        .select("_id name");
+        .select("_id name type year");
 
     const classes = await ClassSection.find({ dept: dept_id })
         .select("_id name year batches");
@@ -793,22 +824,25 @@ export const getFacultySubjectMeta = asyncHandler(async (req, res) => {
 });
 
 export const addFacultySubjects = asyncHandler(async (req, res) => {
-
     const { dept_id } = req.params;
     if (!dept_id) {
-        throw new ApiError(403, "DepartmentId and StudentId are required");
+        throw new ApiError(400, "DepartmentId is required");
     }
 
     const {
         faculty_id,
         subject_id,
         class_id,
-        batch_code,
+        batch_code = "",
         formType
     } = req.body;
 
-    if (!faculty_id || !subject_id || !class_id || !batch_code || !formType) {
-        throw new ApiError(400, "All fields are required");
+    if (!faculty_id || !subject_id || !formType) {
+        throw new ApiError(400, "faculty, subject and formType are required");
+    }
+
+    if (formType !== "theory" && !batch_code) {
+        throw new ApiError(400, "batch_code is required");
     }
 
     const department = await Department.findById(dept_id);
@@ -816,38 +850,355 @@ export const addFacultySubjects = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
-    const classSection = await ClassSection.findById(class_id);
-
-    if (!classSection) {
-        throw new ApiError(404, "ClassSection not found");
-    }
-
     const subject = await Subject.findById(subject_id);
-
     if (!subject) {
         throw new ApiError(404, "Subject not found");
     }
 
     const faculty = await Faculty.findById(faculty_id);
-
     if (!faculty) {
-        throw new ApiError(404, "faculty not found");
+        throw new ApiError(404, "Faculty not found");
+    }
+
+    let classSectionId = null;
+
+    if (subject.type === "dept") {
+        if (!class_id) {
+            throw new ApiError(400, "class_id is required for core subjects");
+        }
+
+        const classSection = await ClassSection.findById(class_id);
+        if (!classSection) {
+            throw new ApiError(404, "ClassSection not found");
+        }
+
+        classSectionId = classSection._id;
     }
 
     const facultySubject = await FacultySubject.create({
         faculty: faculty._id,
         subject: subject._id,
-        class_id: classSection._id,
+        class_id: classSectionId,
         batch_code: batch_code,
-        formType: formType
+        formType
     });
 
     if (!facultySubject) {
-        throw new ApiError(500, "failed to create facultySubject");
+        throw new ApiError(500, "Failed to create facultySubject")
+    }
+
+    return res.status(201).json(
+        new ApiResponse(201, facultySubject, "FacultySubject created successfully")
+    );
+});
+
+export const updateFacultySubject = asyncHandler(async (req, res) => {
+    const { dept_id, facultySubjectId } = req.params;
+
+    if (!dept_id || !facultySubjectId) {
+        throw new ApiError(400, "DepartmentId and FacultySubjectId are required");
+    }
+
+    const {
+        faculty_id,
+        subject_id,
+        class_id,
+        batch_code = "",
+        formType
+    } = req.body;
+
+    if (!faculty_id || !subject_id || !formType) {
+        throw new ApiError(400, "faculty, subject and formType are required");
+    }
+
+    if (formType !== "theory" && !batch_code) {
+        throw new ApiError(400, "batch_code is required");
+    }
+
+    const department = await Department.findById(dept_id);
+    if (!department) {
+        throw new ApiError(404, "Department not found");
+    }
+
+    const subject = await Subject.findById(subject_id);
+    if (!subject) {
+        throw new ApiError(404, "Subject not found");
+    }
+
+    const faculty = await Faculty.findById(faculty_id);
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
+    }
+
+    let classSectionId = null;
+
+    if (subject.type === "dept") {
+        if (!class_id) {
+            throw new ApiError(400, "class_id is required for core subjects");
+        }
+
+        const classSection = await ClassSection.findById(class_id);
+        if (!classSection) {
+            throw new ApiError(404, "ClassSection not found");
+        }
+
+        classSectionId = classSection._id;
+    }
+
+    const existingFacultySubject = await FacultySubject.exists({
+        faculty: faculty._id,
+        subject: subject._id,
+        class_id: classSectionId,
+        batch_code: batch_code,
+        formType
+    });
+    
+    if (existingFacultySubject) {
+        throw new ApiError(409, "Faculty is already this subject to this class");
+    }
+
+    const facultySubject = await FacultySubject.findByIdAndUpdate(
+        facultySubjectId,
+        {
+            faculty: faculty._id,
+            subject: subject._id,
+            class_id: classSectionId,
+            batch_code: batch_code,
+            formType
+        }, { new: true });
+
+    if (!facultySubject) {
+        throw new ApiError(500, "Failed to update facultySubject");
+    }
+
+    return res.status(201).json(
+        new ApiResponse(201, facultySubject, "FacultySubject updated successfully")
+    );
+});
+
+//elective subject
+export const addElectiveStudentsFromFile = asyncHandler(async (req, res) => {
+    const { facultySubjectId } = req.params;
+
+    if (!facultySubjectId) {
+        throw new ApiError(400, "FacultySubjectId is required");
+    }
+
+    const facultySubject = await FacultySubject
+        .findById(facultySubjectId)
+        .populate("subject", "type year");
+
+    if (!facultySubject) {
+        throw new ApiError(404, "FacultySubject not found");
+    }
+
+    if (facultySubject.subject.type !== "elective") {
+        throw new ApiError(400, "Only elective subjects support enrollment");
+    }
+
+    const file = req.file;
+    if (!file) {
+        throw new ApiError(400, "Excel file is required");
+    }
+
+    const studentData = await excelToJson(file);
+    if (!studentData.length) {
+        throw new ApiError(400, "Excel file is empty");
+    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const emails = studentData
+            .map(s => s.email?.toLowerCase())
+            .filter(Boolean);
+
+        const studentUser = await User.find({ email: { $in: emails } });
+        const userIds = studentUser.map((u) => u._id);
+
+        const students = await Student.find({
+            user_id: { $in: userIds }
+        }).populate("user_id", "email").select("_id email academic_year");
+
+        const studentMap = new Map(
+            students.map(s => [s?.user_id?.email, { studentId: s._id, academic_year: s.academic_year }])
+        );
+
+        const existingEnrollments = await ElectiveEnrollment.find({
+            facultySubject: facultySubjectId,
+            student: { $in: students.map(s => s._id) }
+        }).select("student");
+
+        const enrolledSet = new Set(
+            existingEnrollments.map(e => e.student.toString())
+        );
+
+        const newEnrollments = [];
+        let skipped = 0;
+
+        for (const row of studentData) {
+            const email = row.email?.toLowerCase();
+            const { studentId, academic_year } = studentMap.get(email);
+            const studentYear = getStudentYear(academic_year)
+            if (!studentId || enrolledSet.has(studentId.toString()) || facultySubject.subject.year !== studentYear) {
+                skipped++;
+                continue;
+            }
+
+            newEnrollments.push({
+                facultySubject: facultySubjectId,
+                student: studentId
+            });
+        }
+
+        if (newEnrollments.length) {
+            await ElectiveEnrollment.insertMany(newEnrollments, { session });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                inserted: newEnrollments.length,
+                skipped
+            },
+            message: "Elective students enrolled successfully"
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        if (error instanceof ApiError) {
+            throw error
+        }
+        throw new ApiError(500, "Failed to enroll elective students");
+    }
+});
+
+export const addElectiveStudent = asyncHandler(async (req, res) => {
+    const { facultySubjectId } = req.params;
+
+    if (!facultySubjectId) {
+        throw new ApiError(400, "FacultySubjectId is required");
+    }
+
+    const { email } = req.body;
+    if (!email) {
+        throw new ApiError(400, "Student email is required");
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const student = await Student.findOne({ user_id: user._id });
+    if (!student) {
+        throw new ApiError(404, "Student not found");
+    }
+
+    const facultySubject = await FacultySubject
+        .findById(facultySubjectId)
+        .populate("subject", "type year");
+
+    if (!facultySubject) {
+        throw new ApiError(404, "FacultySubject not found");
+    }
+
+    if (facultySubject.subject.type !== "elective") {
+        throw new ApiError(400, "Only elective subjects support enrollment");
+    }
+
+    const studentYear = getStudentYear(student.academic_year);
+    if (facultySubject.subject.year !== studentYear) {
+        throw new ApiError(
+            400,
+            "Student academic year does not match elective subject year"
+        );
+    }
+
+    const alreadyEnrolled = await ElectiveEnrollment.findOne({
+        facultySubject: facultySubjectId,
+        student: student._id
+    });
+
+    if (alreadyEnrolled) {
+        throw new ApiError(400, "Student already enrolled in this elective");
+    }
+
+    const createdElectiveEnrollment = await ElectiveEnrollment.create({
+        student: student._id,
+        facultySubject: facultySubject._id
+    });
+
+    if (!createdElectiveEnrollment) {
+        throw new ApiError(500, "Failed to create elective enrollment");
     }
 
     return res.status(200).json(
-        200, {}, "successfully created facultySubject data"
+        new ApiResponse(
+            200,
+            createdElectiveEnrollment,
+            "Successfully created elective enrollment"
+        )
+    );
+});
+
+export const getElectiveStudent = asyncHandler(async (req, res) => {
+    const { facultySubjectId } = req.params;
+
+    if (!facultySubjectId) {
+        throw new ApiError(400, "FacultySubjectId is required");
+    }
+
+    const electives = await ElectiveEnrollment.find({
+        facultySubject: facultySubjectId
+    })
+        .populate({
+            path: "student",
+            options: { sort: { roll_no: 1 } },
+            populate: [
+                { path: "user_id", select: "fullname email" },
+                { path: "class_id", select: "name year" }
+            ]
+        })
+        .select("student")
+
+    if (!electives || electives.length === 0) {
+        throw new ApiError(404, "No students found for this elective");
+    }
+
+    const students = electives.map(e => ({
+        _id: e._id,
+        student: e.student,
+    }));
+
+    return res.status(200).json(
+        new ApiResponse(200, students, "Elective students fetched successfully")
+    );
+});
+
+export const deleteElectiveStudents = asyncHandler(async (req, res) => {
+    const { elective_ids } = req.body;
+
+    if (!Array.isArray(elective_ids) || elective_ids.length === 0) {
+        throw new ApiError(400, "elective_ids array is required");
+    }
+
+    const result = await ElectiveEnrollment.deleteMany({
+        _id: { $in: elective_ids }
+    });
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                deletedCount: result.deletedCount
+            },
+            "Elective students deleted successfully"
+        )
     );
 });
 
@@ -890,22 +1241,34 @@ export const addStudentFile = asyncHandler(async (req, res) => {
             existingUsers.map(u => u.email)
         );
 
-        const classNames = [...new Set(studentData.map(s => s.class_name))];
+        const classNameYearMap = new Map();
+
+        for (const s of studentData) {
+            const year = getStudentYear(s.academic_year);
+            const name = s.class_name;
+
+            const key = `${year}_${name}`;
+            if (!classNameYearMap.has(key)) {
+                classNameYearMap.set(key, { year, name });
+            }
+        }
+
+        const classes = Array.from(classNameYearMap.values());
 
         const classSections = await ClassSection.find({
             dept: dept_id,
-            name: { $in: classNames }
+            $or: classes
         });
 
-        if (!classSections.length) {
+        if (classSections.length === 0) {
             throw new ApiError(404, "No matching classes found for department");
         }
 
         const classMap = new Map();
         classSections.forEach(cs => {
-            classMap.set(`${cs.year}_${cs.name}`, {
-                class_id: cs._id,
-                strength: cs.strength
+            classMap.set(`${cs?.year}_${cs?.name}`, {
+                class_id: cs?._id,
+                strength: cs?.strength
             });
         });
 
@@ -939,7 +1302,7 @@ export const addStudentFile = asyncHandler(async (req, res) => {
                 role: "student"
             });
 
-            if (Number(strength) < Number(roll_no)) {
+            if (Number(strength) < Number(s.roll_no)) {
                 throw new ApiError(400, "Roll no cannot be more than class strength");
             }
 
@@ -984,9 +1347,13 @@ export const addStudentFile = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.error("Failed to add students", error);
-        throw new ApiError(500, "Failed to add students");
+
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new ApiError(500, "Failed to upload students");
     }
+
 });
 
 export const addStudent = asyncHandler(async (req, res) => {
@@ -1020,12 +1387,11 @@ export const addStudent = asyncHandler(async (req, res) => {
 
     const password = department.code.toLowerCase() + "123";
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const studentUser = await User.create({
         email,
         fullname,
-        password: hashedPassword
+        password: password,
+        role: "student"
     });
 
     const classSection = await ClassSection.findOne({
@@ -1068,11 +1434,17 @@ export const getStudentsByDept = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Department not found");
     }
 
+    const { year } = req.query;
+    const query = {
+        dept: department._id
+    }
+    if (["FY", "SY", "TY", "BY"].includes(year)) {
+        query.academic_year = getStudentAcademicYear(year);
+    }
+
     const departmentStudents = await Student.aggregate([
         {
-            $match: {
-                dept: department._id
-            }
+            $match: query
         },
         {
             $lookup: {
@@ -1114,7 +1486,7 @@ export const getStudentsByDept = asyncHandler(async (req, res) => {
     ]);
 
     if (!Array.isArray(departmentStudents) || departmentStudents.length === 0) {
-        throw new ApiError(404, "Department Faculties not found");
+        throw new ApiError(404, "Department Students not found");
     }
 
     return res.status(200).json(
@@ -1258,7 +1630,9 @@ export const addFacultyFile = asyncHandler(async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.error("Failed to add faculty", error);
+        if (error instanceof ApiError) {
+            throw error
+        }
         throw new ApiError(500, "Failed to add faculty");
     }
 });
@@ -1290,13 +1664,11 @@ export const addFaculty = asyncHandler(async (req, res) => {
     }
 
     const password = "faculty123";
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const facultyUser = await User.create({
         email,
         fullname,
-        password: hashedPassword
+        password: password,
+        role: "faculty"
     });
 
     const faculty = await Faculty.create({
@@ -1642,7 +2014,6 @@ export const addClass = asyncHandler(async (req, res) => {
     if (!year || !name || !strength || !Array.isArray(batches) || batches.length === 0) {
         throw new ApiError(400, "Year, name, batches and strength are required");
     }
-
     const department = await Department.findById(dept_id);
     if (!department) {
         throw new ApiError(404, "Department not found");
@@ -1747,6 +2118,11 @@ export const updateClass = asyncHandler(async (req, res) => {
     if (!year || !name || !strength || !Array.isArray(batches) || batches.length === 0) {
         throw new ApiError(400, "Year, name, strength and batches are required");
     }
+    const strengthNum = Number(strength);
+
+    if (strengthNum <= 0 || strengthNum > 100) {
+        throw new ApiError(400, "Invalid strength");
+    }
 
     const department = await Department.findById(dept_id);
     if (!department) {
@@ -1777,13 +2153,13 @@ export const updateClass = asyncHandler(async (req, res) => {
         const { from, to } = batch.rollRange || {};
         const fromNum = Number(from);
         const toNum = Number(to);
-        const strengthNum = Number(strength);
 
         if (
             Number.isNaN(fromNum) ||
             Number.isNaN(toNum) ||
             fromNum >= toNum ||
             toNum > strengthNum
+            || fromNum <= 0 || toNum <= 0
         ) {
             throw new ApiError(400, "batch must have valid rollRange");
         }

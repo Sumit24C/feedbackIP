@@ -131,36 +131,53 @@ export const getFacultyClassess = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Faculty not found");
     }
 
-    const facultySubject = await FacultySubject.find({ faculty: faculty._id })
+    const facultySubjects = await FacultySubject.find({
+        faculty: faculty._id
+    })
         .select("formType class_id subject batch_code")
         .populate({
             path: "class_id",
             populate: {
                 path: "dept",
                 select: "code"
-            },
+            }
         })
         .populate({
             path: "subject",
-            select: "name"
+            select: "name type year",
+            populate: {
+                path: "dept",
+                select: "code"
+            }
         });
 
-    if (!Array.isArray(facultySubject) || facultySubject.length === 0) {
+    if (!facultySubjects.length) {
         throw new ApiError(404, "No subjects found");
     }
 
-    const formattedFacultySubject = facultySubject.map((fs) => ({
-        _id: fs._id,
-        class_year: fs.class_id.year,
-        class_name: fs.class_id.name,
-        batch_code: fs.batch_code,
-        formType: fs.formType,
-        department: fs.class_id.dept.code,
-        subject: fs.subject?.name
-    }))
+    const formattedFacultySubject = facultySubjects.map(fs => {
+        const isElective = fs.subject?.type === "elective";
+
+        return {
+            _id: fs._id,
+            formType: fs.formType,
+            batch_code: fs.batch_code,
+            subject: fs.subject?.name,
+            class_year: !isElective ? fs.class_id?.year : fs.subject?.year,
+            class_name: !isElective ? fs.class_id?.name : "Elective",
+            department: !isElective
+                ? fs.class_id?.dept?.code
+                : fs.subject?.dept?.code,
+            isElective
+        };
+    });
 
     return res.status(200).json(
-        new ApiResponse(200, formattedFacultySubject, "successfully fetched classess")
+        new ApiResponse(
+            200,
+            formattedFacultySubject,
+            "Successfully fetched classes"
+        )
     );
 });
 

@@ -50,8 +50,6 @@ function ClassTab() {
     fetchClasses();
   }, [dept_id]);
 
-  /* -------------------- Batch helpers -------------------- */
-
   const addBatch = () => {
     setEditData((prev) => ({
       ...prev,
@@ -85,8 +83,6 @@ function ClassTab() {
     if (!editData?.name || !editData?.year || !editData?.strength) return false;
     return editData.batches?.every(isBatchValid);
   }, [editData]);
-
-  /* -------------------- CRUD -------------------- */
 
   const handleCreate = async (data) => {
     try {
@@ -142,11 +138,8 @@ function ClassTab() {
     }
   };
 
-  /* -------------------- UI -------------------- */
-
   return (
     <>
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-semibold">Classes</h2>
@@ -157,7 +150,6 @@ function ClassTab() {
         <Button onClick={() => setOpen(true)}>Add Class</Button>
       </div>
 
-      {/* Class Grid */}
       <div className="border grid grid-cols-2 gap-3 p-3 rounded-xl max-h-2/6 overflow-y-auto">
         {loading ? (
           <div className="py-10 col-span-2 text-center text-muted-foreground">
@@ -174,7 +166,6 @@ function ClassTab() {
                 className={`${editing ? "border-blue-400" : ""} py-2`}
               >
                 <CardContent className="px-2">
-                  {/* Header */}
                   <div className="flex justify-between space-y-1">
                     {editing ? (
                       <div className="grid grid-cols-2 gap-2 w-full">
@@ -229,8 +220,6 @@ function ClassTab() {
                         </p>
                       </div>
                     )}
-
-                    {/* Actions */}
                     <div className="flex gap-2">
                       {editing ? (
                         <>
@@ -277,8 +266,6 @@ function ClassTab() {
                       )}
                     </div>
                   </div>
-
-                  {/* Batches */}
                   <div className="grid grid-cols-2 gap-2 auto-rows-fr mt-2">
                     {data.batches.map((b, i) => (
                       <Card key={i} className="p-2 bg-muted">

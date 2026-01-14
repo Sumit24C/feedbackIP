@@ -14,7 +14,6 @@ const facultySubjectSchema = new mongoose.Schema({
     class_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "ClassSection",
-        required: true
     },
     batch_code: {
         type: String,
@@ -25,7 +24,7 @@ const facultySubjectSchema = new mongoose.Schema({
     formType: {
         type: String,
         enum: ["theory", "practical", "tutorial"],
-        required: true
+        default: "theory"
     }
 }, { timestamps: true });
 
