@@ -18,7 +18,7 @@ const facultySubjectSchema = new mongoose.Schema({
     batch_code: {
         type: String,
         required: function () {
-            return this.formType !== "theory";
+            return this.formType === "tutorial";
         }
     },
     formType: {

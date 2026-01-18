@@ -612,7 +612,7 @@ export const uploadFacultySubjects = asyncHandler(async (req, res) => {
             continue;
         }
 
-        if (formType !== "theory") {
+        if (formType !== "theory" && subject.type !== "elective") {
             if (!batch_code) {
                 skippedRows.push({
                     row: i + 1,
@@ -841,10 +841,6 @@ export const addFacultySubjects = asyncHandler(async (req, res) => {
         throw new ApiError(400, "faculty, subject and formType are required");
     }
 
-    if (formType !== "theory" && !batch_code) {
-        throw new ApiError(400, "batch_code is required");
-    }
-
     const department = await Department.findById(dept_id);
     if (!department) {
         throw new ApiError(404, "Department not found");
@@ -853,6 +849,10 @@ export const addFacultySubjects = asyncHandler(async (req, res) => {
     const subject = await Subject.findById(subject_id);
     if (!subject) {
         throw new ApiError(404, "Subject not found");
+    }
+
+    if (formType !== "theory" && subject.type !== "elective" && !batch_code) {
+        throw new ApiError(400, "batch_code is required");
     }
 
     const faculty = await Faculty.findById(faculty_id);
@@ -911,10 +911,6 @@ export const updateFacultySubject = asyncHandler(async (req, res) => {
         throw new ApiError(400, "faculty, subject and formType are required");
     }
 
-    if (formType !== "theory" && !batch_code) {
-        throw new ApiError(400, "batch_code is required");
-    }
-
     const department = await Department.findById(dept_id);
     if (!department) {
         throw new ApiError(404, "Department not found");
@@ -923,6 +919,10 @@ export const updateFacultySubject = asyncHandler(async (req, res) => {
     const subject = await Subject.findById(subject_id);
     if (!subject) {
         throw new ApiError(404, "Subject not found");
+    }
+
+    if (formType !== "theory" && subject.type !== "elective" && !batch_code) {
+        throw new ApiError(400, "batch_code is required");
     }
 
     const faculty = await Faculty.findById(faculty_id);
@@ -952,7 +952,7 @@ export const updateFacultySubject = asyncHandler(async (req, res) => {
         batch_code: batch_code,
         formType
     });
-    
+
     if (existingFacultySubject) {
         throw new ApiError(409, "Faculty is already this subject to this class");
     }

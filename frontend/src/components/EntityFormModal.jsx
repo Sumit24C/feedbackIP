@@ -43,6 +43,7 @@ function EntityFormModal({
     const subject = meta?.subjects?.find((s) => s._id === selectedSubjectId);
     return subject
   }, [selectedSubjectId, meta?.subjects]);
+
   const isElectiveSubject = selectedSubject?.type === "elective";
   const formType = watch("formType");
 
@@ -75,7 +76,7 @@ function EntityFormModal({
       return;
     }
 
-    if (isFacultySubject && data.formType === "theory") {
+    if ((isFacultySubject && (data.formType === "theory" || selectedSubject.type === "elective"))) {
       data.batch_code = null;
     }
 
@@ -168,7 +169,7 @@ function EntityFormModal({
                   <option value="tutorial">Tutorial</option>
                 </select>
 
-                {formType !== "theory" && (
+                {(formType !== "theory" && selectedSubject.type !== "elective") && (
                   <input
                     {...register("batch_code", { required: true })}
                     placeholder="Batch Code (A1, B2...)"
