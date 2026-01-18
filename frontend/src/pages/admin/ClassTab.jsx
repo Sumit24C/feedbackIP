@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import EntityFormModal from "@/components/EntityFormModal";
@@ -18,7 +18,6 @@ import {
 
 function ClassTab() {
   const { dept_id } = useOutletContext();
-  const axiosPrivate = useAxiosPrivate();
 
   const [classes, setClasses] = useState([]);
   const [open, setOpen] = useState(false);
@@ -37,7 +36,7 @@ function ClassTab() {
   const fetchClasses = async () => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.get(`/admin/classes/${dept_id}`);
+      const res = await api.get(`/admin/classes/${dept_id}`);
       setClasses(res.data.data);
     } catch (err) {
       toast.error(extractErrorMsg(err));
@@ -86,7 +85,7 @@ function ClassTab() {
 
   const handleCreate = async (data) => {
     try {
-      const res = await axiosPrivate.post(
+      const res = await api.post(
         `/admin/classes/${dept_id}`,
         data
       );
@@ -106,7 +105,7 @@ function ClassTab() {
 
     setSavingId(id);
     try {
-      const res = await axiosPrivate.patch(
+      const res = await api.patch(
         `/admin/class/${dept_id}/${id}`,
         editData
       );
@@ -126,7 +125,7 @@ function ClassTab() {
 
     setDeletingId(id);
     try {
-      const res = await axiosPrivate.delete(
+      const res = await api.delete(
         `/admin/class/${id}`
       );
       toast.success(res.data.message || "Class deleted");

@@ -139,7 +139,7 @@ export default function Login() {
                 New to ClassSetu?
               </p>
 
-              <Link to="/register">
+              <Link to="/contact">
                 <Button
                   type="button"
                   variant="outline"

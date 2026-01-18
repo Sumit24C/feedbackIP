@@ -32,8 +32,7 @@ export const getFormById = asyncHandler(async (req, res) => {
     if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.dept._id)) {
         throw new ApiError(404, "Department not found");
     }
-
-    const existingResponse = await Response.findOne({ student: req.user._id, form: form._id });
+    const existingResponse = await Response.findOne({ student: student._id, form: form._id });
     if (existingResponse) {
         throw new ApiError(409, "Response already submitted");
     }

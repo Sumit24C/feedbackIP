@@ -5,13 +5,14 @@ import {
     Login,
     UnAuthorized,
     NotFound,
-    RegisterInstitute
+    RegisterInstitute,
+    Contacts
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
 import { CreateDepartment, Department, DepartmentList, StudentTab, FacultyTab, SubjectTab, ClassTab, FacultySubjectTab, ElectiveTab } from './pages/admin'
 import { AttendanceList, FeedbackForm, FeedbackFormList, StudentProfilePage, SubjectAttendance } from './pages/student'
 import { FacultyProfilePage, ClassAttendance, AttendanceDashboard } from './pages/faculty'
-import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse } from './pages/forms'
+import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse, WeeklyFeedback, FacultySubjectResponse } from './pages/forms'
 import NoAccess from './pages/NoAccess'
 
 function AppRouter() {
@@ -53,6 +54,9 @@ function AppRouter() {
                                 <Route index element={<OverallSummary />} />
                                 <Route path="entity/:_id" element={<QuestionSummary />} />
                             </Route>
+                            <Route path='weekly-feedback' element={<WeeklyFeedback />} >
+                                <Route path="entity/:_id" element={<FacultySubjectResponse />} />
+                            </Route>
                             <Route path="all-forms" element={<AllForms />} />
                             <Route path='view-attendance' element={<AttendanceDashboard />} />
                             <Route path='class-attendance/:id' element={<ClassAttendance />} />
@@ -66,6 +70,7 @@ function AppRouter() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<RegisterInstitute />} />
                     <Route path="/no-access" element={<NoAccess />} />
+                    <Route path="/contacts" element={<Contacts />} />
                 </Route>
 
                 <Route path="*" element={<NotFound />} />

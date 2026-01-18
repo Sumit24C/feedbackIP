@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import EntityFormModal from "@/components/EntityFormModal";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function StudentTab() {
   const { dept_id } = useOutletContext();
-  const axiosPrivate = useAxiosPrivate();
   const [students, setStudents] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -19,7 +18,7 @@ function StudentTab() {
   const fetchStudents = async () => {
     setLoading(true)
     try {
-      const res = await axiosPrivate.get(`/admin/students/${dept_id}?year=${yearFilter}`);
+      const res = await api.get(`/admin/students/${dept_id}?year=${yearFilter}`);
       setStudents(res.data.data);
     } catch (error) {
       console.error(`student :: error :: ${extractErrorMsg(error)}`);
@@ -45,7 +44,7 @@ function StudentTab() {
     }
     setLoading(true);
     try {
-      const res = await axiosPrivate.post(
+      const res = await api.post(
         `/admin/students/${dept_id}`,
         {
           ...data
@@ -67,7 +66,7 @@ function StudentTab() {
     formData.append("students", file);
     setLoading(true);
     try {
-      const res = await axiosPrivate.post(`/admin/add-students/${dept_id}`, formData);
+      const res = await api.post(`/admin/add-students/${dept_id}`, formData);
       const { inserted, skipped } = res.data.data;
       toast.success(`inserted: ${inserted}, skipped: ${skipped}` || "Students uploaded");
     } catch (error) {
@@ -91,7 +90,7 @@ function StudentTab() {
     }
     setLoading(true);
     try {
-      const res = await axiosPrivate.patch(
+      const res = await api.patch(
         `/admin/student/${dept_id}/${sId}`,
         {
           ...editData

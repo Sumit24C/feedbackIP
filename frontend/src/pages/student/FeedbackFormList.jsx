@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 import StudentFeedbackCard from "@/components/forms/StudentFeedbackCard";
 import {
@@ -12,7 +12,6 @@ import {
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 export default function FeedbackFormList() {
-  const axiosPrivate = useAxiosPrivate();
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
@@ -20,7 +19,7 @@ export default function FeedbackFormList() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axiosPrivate.get("/student");
+        const res = await api.get("/student");
         setForms(res.data.data);
       } catch (error) {
         toast.error(extractErrorMsg(error) || "No form found");

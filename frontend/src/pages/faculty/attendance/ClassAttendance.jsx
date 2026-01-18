@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import AttendanceTable from "@/components/attendance/AttendanceTable";
 import AttendanceControls from "@/components/attendance/AttendanceControls";
 
 function ClassAttendance() {
-  const api = useAxiosPrivate();
   const { id } = useParams();
 
   const [attendanceLoading, setAttendanceLoading] = useState(true);

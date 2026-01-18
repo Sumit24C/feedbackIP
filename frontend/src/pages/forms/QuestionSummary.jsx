@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { useParams } from "react-router-dom";
 import {
   Chart as ChartJS,
@@ -17,7 +17,6 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const QuestionSummary = () => {
   const { form_id, _id, formType } = useParams();
-  const axios = useAxiosPrivate();
 
   const [graphData, setGraphData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,7 +32,7 @@ const QuestionSummary = () => {
     setLoading(true);
     try {
       const entity = formType === "infrastructure" ? "class" : "subject";
-      const res = await axios.get(`/faculty/${entity}/${form_id}/${_id}`);
+      const res = await api.get(`/faculty/${entity}/${form_id}/${_id}`);
       setGraphData(res.data.data);
     } catch (error) {
       toast.error(extractErrorMsg(error) || "Failed to fetch summary");

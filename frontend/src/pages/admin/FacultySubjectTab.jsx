@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import EntityFormModal from "@/components/EntityFormModal";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function FacultySubjectTab() {
     const { dept_id } = useOutletContext();
-    const axiosPrivate = useAxiosPrivate();
 
     const [facultySubjects, setFacultySubjects] = useState([]);
     const [open, setOpen] = useState(false);
@@ -24,7 +23,7 @@ function FacultySubjectTab() {
 
     const fetchFacultySubjects = async () => {
         try {
-            const res = await axiosPrivate.get(
+            const res = await api.get(
                 `/admin/faculty-subjects/${dept_id}`
             );
             setFacultySubjects(res.data.data);
@@ -42,7 +41,7 @@ function FacultySubjectTab() {
     const handleCreate = async (data) => {
         setLoading(true);
         try {
-            const res = await axiosPrivate.post(
+            const res = await api.post(
                 `/admin/faculty-subjects/${dept_id}`,
                 data
             );
@@ -62,7 +61,7 @@ function FacultySubjectTab() {
 
         setLoading(true);
         try {
-            const res = await axiosPrivate.post(
+            const res = await api.post(
                 `/admin/add-faculty-subjects/${dept_id}`,
                 formData
             );
@@ -79,7 +78,7 @@ function FacultySubjectTab() {
     const handleUpdate = async (fsId) => {
         setLoading(true);
         try {
-            const res = await axiosPrivate.patch(
+            const res = await api.patch(
                 `/admin/faculty-subject/${dept_id}/${fsId}`,
                 editData
             );
@@ -111,7 +110,7 @@ function FacultySubjectTab() {
 
         setMetaLoading(true);
         try {
-            const res = await axiosPrivate.get(
+            const res = await api.get(
                 `/admin/faculty-subjects/meta/${dept_id}`
             );
             setMeta(res.data.data);

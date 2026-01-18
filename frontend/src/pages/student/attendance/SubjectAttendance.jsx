@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { toast } from "sonner";
 import Attendance from "@/components/attendance/Attendance";
 
 function SubjectAttendancePage() {
   const { id } = useParams();
-  const api = useAxiosPrivate();
 
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);

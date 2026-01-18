@@ -144,7 +144,7 @@ export const getFacultyClassess = asyncHandler(async (req, res) => {
         })
         .populate({
             path: "subject",
-            select: "name type year",
+            select: "subject_code type year",
             populate: {
                 path: "dept",
                 select: "code"
@@ -162,7 +162,7 @@ export const getFacultyClassess = asyncHandler(async (req, res) => {
             _id: fs._id,
             formType: fs.formType,
             batch_code: fs.batch_code,
-            subject: fs.subject?.name,
+            subject: fs.subject?.subject_code,
             class_year: !isElective ? fs.class_id?.year : fs.subject?.year,
             class_name: !isElective ? fs.class_id?.name : "Elective",
             department: !isElective

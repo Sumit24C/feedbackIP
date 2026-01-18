@@ -6,11 +6,65 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
 import { Faculty } from "../models/faculty.model.js"
-import { getStudentAcademicYear, getStudentYear } from "../utils/student.utils.js"
 import { Student } from "../models/student.model.js"
 import { getCurrentSemester } from "../utils/subject.utils.js"
 
 const CURRENT_SEMESTER = getCurrentSemester();
+
+export const getFacultyClasses = asyncHandler(async (req, res) => {
+    const faculty = await Faculty.findOne({ user_id: req.user._id });
+    if (!faculty) {
+        throw new ApiError(404, "Faculty not found");
+    }
+
+    const facultySubjects = await FacultySubject.find({
+        faculty: faculty._id
+    })
+        .select("formType class_id subject batch_code")
+        .populate({
+            path: "class_id",
+            populate: {
+                path: "dept",
+                select: "code"
+            }
+        })
+        .populate({
+            path: "subject",
+            select: "subject_code type year",
+            populate: {
+                path: "dept",
+                select: "code"
+            }
+        });
+
+    if (!facultySubjects.length) {
+        throw new ApiError(404, "No subjects found");
+    }
+
+    const formattedFacultySubject = facultySubjects.map(fs => {
+        const isElective = fs.subject?.type === "elective";
+        return {
+            _id: fs._id,
+            formType: fs.formType,
+            batch_code: fs.batch_code,
+            subject: fs.subject?.subject_code,
+            class_year: !isElective ? fs.class_id?.year : fs.subject?.year,
+            class_name: !isElective ? fs.class_id?.name : "Elective",
+            department: !isElective
+                ? fs.class_id?.dept?.code
+                : fs.subject?.dept?.code,
+            isElective
+        };
+    });
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            formattedFacultySubject,
+            "Successfully fetched classes"
+        )
+    );
+});
 
 export const getSubjectMapping = asyncHandler(async (req, res) => {
     const faculty = await Faculty.findOne({ user_id: req.user._id });
@@ -349,7 +403,7 @@ export const getOverallFeedbackResult = asyncHandler(async (req, res) => {
                         key: {
                             $cond: [
                                 { $eq: ["$facultySubject.subject_type", "elective"] },
-                                "$facultySubject._id",     
+                                "$facultySubject._id",
                                 "$facultySubject.class_id"
                             ]
                         }

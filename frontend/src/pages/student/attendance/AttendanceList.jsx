@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { toast } from "sonner";
 import AttendanceSummary from "@/components/attendance/AttendanceSummary";
@@ -10,8 +10,6 @@ function AttendanceList() {
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
   const [filterType, setFilterType] = useState("all");
-
-  const api = useAxiosPrivate();
 
   useEffect(() => {
     (async () => {

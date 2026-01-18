@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import EntityFormModal from "@/components/EntityFormModal";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function ElectiveTab() {
     const { dept_id } = useOutletContext();
-    const axiosPrivate = useAxiosPrivate();
 
     const [electives, setElectives] = useState([]);
     const [electiveStudents, setElectiveStudents] = useState([]);
@@ -21,7 +20,7 @@ function ElectiveTab() {
 
     const fetchElectives = async () => {
         try {
-            const res = await axiosPrivate.get(
+            const res = await api.get(
                 `/admin/faculty-subjects/${dept_id}?type=elective`
             );
             setElectives(res.data.data);
@@ -39,7 +38,7 @@ function ElectiveTab() {
     const fetchElectiveStudents = async (facultySubjectId) => {
         setStudentsLoading(true);
         try {
-            const res = await axiosPrivate.get(
+            const res = await api.get(
                 `/admin/electives/${facultySubjectId}`
             );
             setElectiveStudents(res.data.data);
@@ -70,7 +69,7 @@ function ElectiveTab() {
 
     const handleCreate = async ({ facultySubjectId, email }) => {
         try {
-            const res = await axiosPrivate.post(
+            const res = await api.post(
                 `/admin/electives/${facultySubjectId}`,
                 { email }
             );
@@ -87,7 +86,7 @@ function ElectiveTab() {
         formData.append("students", file);
 
         try {
-            const res = await axiosPrivate.post(
+            const res = await api.post(
                 `/admin/add-electives/${facultySubjectId}`,
                 formData
             );
@@ -106,7 +105,7 @@ function ElectiveTab() {
         if (!confirm(`Remove ${selectedIds.length} student(s) from elective?`)) return;
 
         try {
-            await axiosPrivate.delete("/admin/electives/students", {
+            await api.delete("/admin/electives/students", {
                 data: { elective_ids: selectedIds }
             });
 
@@ -220,9 +219,8 @@ function ElectiveTab() {
                             electiveStudents.map((e, index) => (
                                 <tr
                                     key={e._id}
-                                    className={`border-b ${
-                                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                    } hover:bg-blue-50`}
+                                    className={`border-b ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                        } hover:bg-blue-50`}
                                 >
                                     <td className="p-3 text-center">
                                         <input

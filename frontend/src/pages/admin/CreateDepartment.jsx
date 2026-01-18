@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { api } from "@/api/api";
+import { useNavigate } from "react-router-dom";
+import { FileUpload } from "@/components/admin/FileUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,16 +11,12 @@ import {
   CardTitle,
   CardDescription
 } from "@/components/ui/card";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 import {
   Building2,
 } from "lucide-react";
-import { FileUpload } from "@/components/admin/FileUpload";
 
 export default function CreateDepartment() {
-  const api = useAxiosPrivate();
   const navigate = useNavigate();
 
   const [deptName, setDeptName] = useState("");

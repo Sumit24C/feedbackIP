@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useAxiosPrivate } from '@/hooks/useAxiosPrivate'
+import { api } from '@/api/api'
 import { useRefreshToken } from '@/hooks/useRefreshToken'
 import { login, logout } from "@/store/authSlice.js"
 import { Outlet } from 'react-router-dom'
 function PersistLogin() {
-    const axiosPrivate = useAxiosPrivate()
     const refresh = useRefreshToken()
     const [isLoading, setIsLoading] = useState(true)
     const { userData } = useSelector((state) => state.auth)
@@ -15,7 +14,7 @@ function PersistLogin() {
         const verify = async () => {
             try {
                 await refresh()
-                const res = await axiosPrivate.get('/user/current-user')
+                const res = await api.get('/user/current-user')
                 dispatch(login(res.data.data))
                 return res.data.data
             } catch (error) {

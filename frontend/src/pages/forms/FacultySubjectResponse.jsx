@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { api } from "@/api/api";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -8,49 +9,52 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { api } from "@/api/api";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const OverallSummary = () => {
-  const [graphData, setGraphData] = useState([]);
+function FacultySubjectResponse() {
+  const { _id } = useParams();
+
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { form_id, formType } = useParams();
 
   useEffect(() => {
-    (async function () {
-      if (!form_id) return;
+    if (!_id) return;
+
+    (async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/faculty/overall-result/${form_id}`)
-        setGraphData(res.data.data);
+        const res = await api.get(`/weekly-feedback/${_id}`);
+        setData(res.data.data || []);
       } catch (error) {
-        toast.error(extractErrorMsg(error) || "summary not found");
+        toast.error(extractErrorMsg(error) || "Failed to load feedback");
+        setData([]);
       } finally {
         setLoading(false);
       }
     })();
-  }, [form_id]);
+  }, [_id]);
 
-  const labels = graphData?.map((item) => (
-    (formType === "theory" || formType === "infrastructure")
-      ? `${item.class_year + "-" + item.class_name}`
-      : `${item.class_year + "-" + item.batch_code}`));
+  const labels = data.map((item) => {
+    const start = new Date(item.session_start).toLocaleDateString();
+    const end = new Date(item.session_end).toLocaleDateString();
+    return `${start} → ${end}`;
+  });
 
-  const avgRatings = graphData?.map((item) => Number(item.avgRating) || 0);
-  const totalResponses = graphData.map(
-    (item) => Number(item.totalResponses) || 0
+  const avgScores = data.map((item) => Number(item.avg_score) || 0);
+  const totalResponses = data.map(
+    (item) => Number(item.total_responses) || 0
   );
 
   const chartData = {
     labels,
     datasets: [
       {
-        label: "Average Rating",
-        data: avgRatings,
+        label: "Average Score",
+        data: avgScores,
         backgroundColor: "#4f8cff",
         borderRadius: 6,
       },
@@ -60,19 +64,15 @@ const OverallSummary = () => {
   const options = {
     responsive: true,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
         callbacks: {
-          title: (tooltipItems) => {
-            return `Class ${tooltipItems[0].label}`;
-          },
-          label: (tooltipItem) => {
-            const index = tooltipItem.dataIndex;
+          title: (items) => `Session ${items[0].label}`,
+          label: (item) => {
+            const i = item.dataIndex;
             return [
-              `Average Rating: ${avgRatings[index].toFixed(2)}`,
-              `Total Responses: ${totalResponses[index]}`,
+              `Average Score: ${avgScores[i].toFixed(2)}`,
+              `Total Responses: ${totalResponses[i]}`,
             ];
           },
         },
@@ -97,23 +97,20 @@ const OverallSummary = () => {
   return (
     <div className="flex-1 flex flex-col items-center justify-center">
       <h2 className="text-xl font-semibold mb-4 text-black">
-        Overall Feedback Summary (Class-wise)
+        Weekly Feedback Trend
       </h2>
 
       {loading ? (
         <p className="text-gray-600 animate-pulse">Loading chart...</p>
-      ) : graphData.length === 0 ? (
-        <p className="text-gray-600">No feedback available</p>
+      ) : data.length === 0 ? (
+        <p className="text-gray-600">No weekly feedback available</p>
       ) : (
         <div className="w-[80%]">
-          <Bar
-            data={chartData}
-            options={options}
-          />
+          <Bar data={chartData} options={options} />
         </div>
       )}
     </div>
   );
-};
+}
 
-export default OverallSummary;
+export default FacultySubjectResponse;

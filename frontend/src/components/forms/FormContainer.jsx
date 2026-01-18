@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { Trash2 } from "lucide-react";
 import {
     Select,
@@ -29,7 +29,6 @@ function FormContainer({
     setTargetType,
 }) {
     const navigate = useNavigate();
-    const axiosPrivate = useAxiosPrivate();
     const { userData } = useSelector((state) => state.auth);
     const [questions, setQuestions] = useState([]);
     const [newQuestion, setNewQuestion] = useState("");
@@ -57,7 +56,7 @@ function FormContainer({
         (async () => {
             setLoadingForm(true);
             try {
-                const res = await axiosPrivate.get(`/form/${form_id}`);
+                const res = await api.get(`/form/${form_id}`);
                 const form = res.data.data;
 
                 reset({
@@ -148,10 +147,10 @@ function FormContainer({
 
         try {
             if (form_id && action === "update") {
-                await axiosPrivate.put(`/form/${form_id}`, payload);
+                await api.put(`/form/${form_id}`, payload);
                 toast.success("Form updated successfully");
             } else {
-                await axiosPrivate.post("/form", payload);
+                await api.post("/form", payload);
                 toast.success("Form created successfully");
             }
             navigate(`/${userData?.role}/all-forms`);

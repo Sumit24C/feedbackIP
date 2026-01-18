@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
 import ClassCard from "@/components/forms/ClassCard";
 import { toast } from "sonner";
@@ -9,7 +9,6 @@ const FeedbackResponse = () => {
   const [entities, setEntities] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const api = useAxiosPrivate();
   const navigate = useNavigate();
   const location = useLocation();
   const { formType, form_id } = useParams();
@@ -70,7 +69,7 @@ const FeedbackResponse = () => {
                   <div className="w-5 h-5 border-2 border-transparent border-t-blue-500 border-l-blue-400 rounded-full animate-spin" />
                 </div>
               ) : entities.length > 0 ? (
-                <div className="max-h-[60vh] overflow-y-auto space-y-1 pr-1">
+                <div className="max-h-96 overflow-y-auto space-y-1 pr-1">
                   {entities.map((en) => (
                     <ClassCard
                       key={en._id}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 function StudentProfilePage() {
-  const axiosPrivate = useAxiosPrivate();
 
   const [profileInfo, setProfileInfo] = useState({});
   const [loading, setLoading] = useState(false);
@@ -24,7 +23,7 @@ function StudentProfilePage() {
     (async function () {
       setLoading(true);
       try {
-        const res = await axiosPrivate.get("/user/user-profile");
+        const res = await api.get("/user/user-profile");
         setProfileInfo(res.data.data);
       } catch (error) {
         setErrMsg(extractErrorMsg(error));
@@ -43,7 +42,7 @@ function StudentProfilePage() {
     }
 
     try {
-      await axiosPrivate.post("/user/update-password", {
+      await api.post("/user/update-password", {
         oldPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });

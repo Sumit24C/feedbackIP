@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import EntityFormModal from "@/components/EntityFormModal";
 
 function SubjectTab() {
   const { dept_id } = useOutletContext();
-  const axiosPrivate = useAxiosPrivate();
 
   const [subjects, setSubjects] = useState([]);
   const [open, setOpen] = useState(false);
@@ -21,7 +20,7 @@ function SubjectTab() {
   const fetchSubjects = async () => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.get(`/admin/subjects/${dept_id}`);
+      const res = await api.get(`/admin/subjects/${dept_id}`);
       setSubjects(res.data.data);
     } catch (error) {
       toast.error(extractErrorMsg(error));
@@ -38,7 +37,7 @@ function SubjectTab() {
     const formData = new FormData();
     formData.append("subjects", file);
     try {
-      await axiosPrivate.post(`/admin/add-subjects/${dept_id}`, formData);
+      await api.post(`/admin/add-subjects/${dept_id}`, formData);
       toast.success("Subjects uploaded");
       setOpen(false);
       fetchSubjects();
@@ -51,7 +50,7 @@ function SubjectTab() {
     setLoading(true);
 
     try {
-      const res = await axiosPrivate.post(
+      const res = await api.post(
         `/admin/subjects/${dept_id}`,
         {
           ...data
@@ -71,7 +70,7 @@ function SubjectTab() {
   const handleUpdate = async (subjectId) => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.patch(
+      const res = await api.patch(
         `/admin/subject/${dept_id}/${subjectId}`,
         { ...editData }
       );

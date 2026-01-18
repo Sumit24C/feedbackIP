@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 function FacultyProfilePage() {
-  const axiosPrivate = useAxiosPrivate();
   const [profileInfo, setProfileInfo] = useState({});
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
@@ -25,7 +24,7 @@ function FacultyProfilePage() {
     (async function () {
       setLoading(true);
       try {
-        const res = await axiosPrivate.get("/user/user-profile");
+        const res = await api.get("/user/user-profile");
         setProfileInfo(res.data.data);
       } catch (error) {
         setErrMsg(extractErrorMsg(error));
@@ -44,7 +43,7 @@ function FacultyProfilePage() {
     }
 
     try {
-      await axiosPrivate.post("/user/update-password", {
+      await api.post("/user/update-password", {
         oldPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });

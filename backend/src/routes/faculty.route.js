@@ -3,6 +3,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { verifyRole } from "../middlewares/role.middleware.js"
 import {
     getDepartmentClass,
+    getFacultyClasses,
     getFeedbackResultByClass,
     getFeedbackResultBySubjects,
     getOverallFeedbackResult,
@@ -12,6 +13,7 @@ import {
 const router = Router();
 router.use(verifyJWT, verifyRole("faculty"));
 
+router.route("/").get(getFacultyClasses);
 router.route("/:form_id").get(getSubjectMapping);
 router.route("/class/:form_id").get(getDepartmentClass);
 

@@ -5,12 +5,10 @@ const weeklyFeedbackSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "FacultySubject",
         required: true,
-        index: true
     },
     session_start: {
         type: Date,
         required: true,
-        index: true
     },
     session_end: {
         type: Date,

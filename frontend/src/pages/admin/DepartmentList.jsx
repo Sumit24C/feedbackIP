@@ -1,12 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useNavigate, useParams } from "react-router-dom";
 import { MoreVertical, Eye, Trash } from "lucide-react";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function DepartmentList() {
-  const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +14,7 @@ function DepartmentList() {
 
   const fetchDepartment = async () => {
     try {
-      const res = await axiosPrivate.get(`/admin`);
+      const res = await api.get(`/admin`);
       setDepartments(res.data.data);
     } catch (error) {
       toast.error(extractErrorMsg(error) || "Failed to load departments");
@@ -41,7 +40,7 @@ function DepartmentList() {
     if (!confirm("Are you sure you want to delete this department?")) return;
     setLoading(true);
     try {
-      const res = await axiosPrivate.delete(`/admin/${id}`);
+      const res = await api.delete(`/admin/${id}`);
       await fetchDepartment();
       toast.success(res.data.message || "Department deleted");
     } catch (error) {

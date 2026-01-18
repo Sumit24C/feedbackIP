@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { useAxiosPrivate } from '@/hooks/useAxiosPrivate'
+import { api } from "@/api/api";
 import AttendanceCard from "@/components/attendance/AttendanceCard";
 import { extractErrorMsg } from '@/utils/extractErrorMsg';
 
 function AttendanceDashboard() {
-    const api = useAxiosPrivate();
     const [loading, setLoading] = useState(true);
     const [errMsg, setErrMsg] = useState("");
     const [attendanceRecords, setAttendanceRecords] = useState([]);

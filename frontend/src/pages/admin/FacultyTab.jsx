@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import EntityFormModal from "@/components/EntityFormModal";
 
 function FacultyTab() {
   const { dept_id } = useOutletContext();
-  const axiosPrivate = useAxiosPrivate();
 
   const [faculties, setFaculties] = useState([]);
   const [open, setOpen] = useState(false);
@@ -20,7 +19,7 @@ function FacultyTab() {
   const fetchFaculties = async () => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.get(`/admin/faculties/${dept_id}`);
+      const res = await api.get(`/admin/faculties/${dept_id}`);
       setFaculties(res.data.data);
     } catch (error) {
       toast.error(extractErrorMsg(error));
@@ -37,7 +36,7 @@ function FacultyTab() {
     const formData = new FormData();
     formData.append("faculties", file);
     try {
-      await axiosPrivate.post(`/admin/add-faculties/${dept_id}`, formData);
+      await api.post(`/admin/add-faculties/${dept_id}`, formData);
       toast.success("Faculties uploaded");
       setOpen(false);
       fetchFaculties();
@@ -49,7 +48,7 @@ function FacultyTab() {
   const handleCreate = async (data) => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.post(
+      const res = await api.post(
         `/admin/faculties/${dept_id}`,
         {
           ...data
@@ -69,7 +68,7 @@ function FacultyTab() {
   const handleUpdate = async (facultyId) => {
     setLoading(true);
     try {
-      const res = await axiosPrivate.patch(
+      const res = await api.patch(
         `/admin/faculty/${dept_id}/${facultyId}`,
         { ...editData }
       );

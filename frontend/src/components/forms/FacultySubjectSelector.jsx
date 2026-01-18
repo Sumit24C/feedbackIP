@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
-import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSelector } from "react-redux";
-import { extractErrorMsg } from "@/utils/extractErrorMsg";
 
 function FacultySubjectSelector({
     form_id,
@@ -14,36 +11,17 @@ function FacultySubjectSelector({
     targetType,
     setTargetType
 }) {
-    const axiosPrivate = useAxiosPrivate();
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState([]);
     const [years, setYears] = useState([]);
     const { userData } = useSelector((state) => state.auth);
+    const { entities, loading } = useSelector((state) => state.facultySubjects);
 
     useEffect(() => {
-        (async () => {
-            try {
-                const url = userData?.role === "admin" ? "/form/admin/dept" : "/form/faculty/class"
-                const res = await axiosPrivate.get(url);
-                if (userData?.role === "faculty") {
-                    const classes = res.data.data;
-                    setYears([...new Set(classes.map(c => c.class_year))]);
-                }
-                setData(res.data.data);
-            } catch (error) {
-                toast.error(
-                    extractErrorMsg(error) || "Failed to fetch data"
-                );
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
+        setYears([...new Set(entities.map(c => c.class_year))]);
+    }, [entities]);
 
-    const filteredData = useMemo(
-        () => data.filter((d) => d.formType === formType),
-        [data, formType]
-    );
+    const filteredData = useMemo(() => {
+        return entities.filter((d) => d.formType === formType)
+    }, [entities, formType]);
 
     const tabs = userData?.role === "faculty" ? ["CLASS", "DEPARTMENT"] : ["DEPARTMENT", "INSTITUTE"];
 
@@ -51,9 +29,7 @@ function FacultySubjectSelector({
         const yearIds = filteredData
             .filter((d) => d.class_year === year)
             .map((d) => d._id);
-
         const allSelected = yearIds.every((id) => selectedClasses.includes(id));
-
         setSelectedClasses((prev) =>
             allSelected
                 ? prev.filter((id) => !yearIds.includes(id))
@@ -228,8 +204,8 @@ function FacultySubjectSelector({
                             </div>
                         ) : (
                             <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
-                                {data.length > 0 ? (
-                                    data.map((item) => {
+                                {entities.length > 0 ? (
+                                    entities.map((item) => {
                                         const isChecked = selectedClasses.includes(item._id);
 
                                         return (

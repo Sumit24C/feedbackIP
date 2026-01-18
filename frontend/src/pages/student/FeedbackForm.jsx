@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { useParams, useNavigate } from "react-router-dom";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { Loader2 } from "lucide-react";
 function FeedbackForm() {
   const { form_id, fs_id } = useParams();
   const navigate = useNavigate();
-  const api = useAxiosPrivate();
 
   const [formData, setFormData] = useState(null);
   const [studentResponses, setStudentResponses] = useState([]);

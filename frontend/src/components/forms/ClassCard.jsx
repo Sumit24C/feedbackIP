@@ -1,13 +1,12 @@
 import { memo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-function ClassCard({ en, formId, formType }) {
+function ClassCard({ en, formId = "", formType = "", isWeekly = false }) {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const path = `/faculty/feedback/${formType}/${formId}/entity/${en._id}`;
+    const path = isWeekly ? `/faculty/weekly-feedback/entity/${en._id}` : `/faculty/feedback/${formType}/${formId}/entity/${en._id}`;
     const active = location.pathname === path;
-
     if (formType === "infrastructure") {
         return (
             <div
@@ -25,9 +24,8 @@ function ClassCard({ en, formId, formType }) {
                         {en.class_year} · {en.class_name}
                     </p>
                 </div>
-
                 <p className="text-xs text-gray-500 mt-0.5">
-                    {en?.totalResponses || 0} responses
+                    {en?.totalResponses || 0} response
                 </p>
             </div>
         );
@@ -48,9 +46,15 @@ function ClassCard({ en, formId, formType }) {
                         {en.subject} · {en.class_year} · {en.batch_code || en.class_name}
                     </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                    {en.totalResponses} responses
-                </p>
+                {!isWeekly ? (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        {en?.totalResponses || 0} response
+                    </p>
+                ) : (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        {en?.formType}
+                    </p>
+                )}
             </div>
         );
     }

@@ -1,18 +1,17 @@
 import { Outlet, NavLink, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 
 function DepartmentLayout() {
     const { dept_id } = useParams();
-    const axiosPrivate = useAxiosPrivate();
     const [dept, setDept] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchDepartment = async () => {
             try {
-                const res = await axiosPrivate.get(`/admin/${dept_id}`);
+                const res = await api.get(`/admin/${dept_id}`);
                 setDept(res.data.data);
             } catch {
                 toast.error("Failed to load department");

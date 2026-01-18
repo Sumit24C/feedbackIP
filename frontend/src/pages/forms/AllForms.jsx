@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
 import {
@@ -12,7 +12,6 @@ import {
 import FormCard from "@/components/forms/FormCard";
 
 function AllForms() {
-  const axiosPrivate = useAxiosPrivate();
 
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +32,7 @@ function AllForms() {
   useEffect(() => {
     const fetchForms = async () => {
       try {
-        const res = await axiosPrivate.get(`/form`);
+        const res = await api.get(`/form`);
         setForms(res.data.data);
       } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to fetch forms");
@@ -49,7 +48,7 @@ function AllForms() {
     if (!confirmDelete) return;
 
     try {
-      await axiosPrivate.delete(`/form/${id}`);
+      await api.delete(`/form/${id}`);
       toast.success("Form deleted successfully");
       setForms((prev) => prev.filter((f) => f._id !== id));
     } catch (error) {
