@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   LayoutDashboard,
   PlusSquare,
+  BarChart3,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 
@@ -33,6 +34,11 @@ function MobileBottomNav() {
         path: "/faculty/create-form",
         label: "Create",
         icon: PlusSquare,
+      },
+      {
+        path: "/faculty/weekly-feedback",
+        label: "Weekly",
+        icon: BarChart3,
       },
       {
         path: "/faculty/view-attendance",
@@ -70,10 +76,9 @@ function MobileBottomNav() {
               flex flex-col items-center justify-center
               text-[11px] font-medium
               transition-colors
-              ${
-                isActive
-                  ? "text-blue-700"
-                  : "text-gray-500"
+              ${isActive
+                ? "text-blue-700"
+                : "text-gray-500"
               }
               `
             }
