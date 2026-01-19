@@ -2,11 +2,15 @@ import React, { useEffect, useState } from "react";
 import { api } from "@/api/api";
 import { useParams, useNavigate } from "react-router-dom";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { invalidateLastFetch } from "@/store/studentForm";
+import { useDispatch } from "react-redux";
+import { toast } from "sonner";
 
 function FeedbackForm() {
   const { form_id, fs_id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [formData, setFormData] = useState(null);
   const [studentResponses, setStudentResponses] = useState([]);
@@ -80,11 +84,12 @@ function FeedbackForm() {
 
     setSubmitLoading(true);
     try {
-      await api.post(`/student/${form_id}`, studentResponses);
-      alert("Feedback submitted successfully");
+      const res = await api.post(`/student/${form_id}`, studentResponses);
+      dispatch(invalidateLastFetch());
+      toast.success(res.data.message || "Feedback submitted successfully");
       navigate("/student/forms");
-    } catch {
-      alert("Something went wrong while submitting.");
+    } catch (error) {
+      toast.error(extractErrorMsg(error) || "Something went wrong while submitting.");
     } finally {
       setSubmitLoading(false);
     }

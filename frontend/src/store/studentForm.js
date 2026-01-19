@@ -24,7 +24,11 @@ const studentFormSlice = createSlice({
         error: null,
         lastFetched: null,
     },
-    reducers: {},
+    reducers: {
+        invalidateLastFetch: (state, action) => {
+            state.lastFetched = null;
+        }
+    },
     extraReducers: (builder) => {
         builder
             .addCase(fetchStudentForms.pending, (state) => {
@@ -42,4 +46,5 @@ const studentFormSlice = createSlice({
     },
 });
 
+export const { invalidateLastFetch } = studentFormSlice.actions;
 export default studentFormSlice.reducer;
