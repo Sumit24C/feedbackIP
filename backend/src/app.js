@@ -32,7 +32,10 @@ import attendanceRoutes from "./routes/attendance.route.js";
 import weeklyFeedbackRoutes from "./routes/weekly_feedback.route.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
-app.use("/api", morgan("dev"));
+if (process.env.NODE_ENV === "development") {
+    app.use("/api", morgan("dev"));
+}
+
 app.use("/api", limiter);
 app.use("/api/user", userRoutes);
 app.use("/api/auth", oAuthRoutes);

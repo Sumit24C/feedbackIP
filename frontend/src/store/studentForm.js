@@ -1,24 +1,25 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
+import { toast } from "sonner";
 
-export const fetchFacultySubjects = createAsyncThunk(
-    "facultySubjects/fetch",
+export const fetchStudentForms = createAsyncThunk(
+    "facultyForms/fetch",
     async (_, { rejectWithValue }) => {
         try {
-            const res = await api.get("/faculty");
+            const res = await api.get("/student");
             return res.data.data;
         } catch (error) {
-            toast.error(extractErrorMsg(error) || "Subject not found");
+            toast.error(extractErrorMsg(error) || "forms not found");
             return rejectWithValue(extractErrorMsg(error));
         }
     }
 );
 
-const facultySubjectSlice = createSlice({
-    name: "facultySubjects",
+const studentFormSlice = createSlice({
+    name: "studentForms",
     initialState: {
-        entities: [],
+        forms: [],
         loading: false,
         error: null,
         lastFetched: null,
@@ -26,19 +27,19 @@ const facultySubjectSlice = createSlice({
     reducers: {},
     extraReducers: (builder) => {
         builder
-            .addCase(fetchFacultySubjects.pending, (state) => {
+            .addCase(fetchStudentForms.pending, (state) => {
                 state.loading = true;
             })
-            .addCase(fetchFacultySubjects.fulfilled, (state, action) => {
+            .addCase(fetchStudentForms.fulfilled, (state, action) => {
                 state.loading = false;
-                state.entities = action.payload;
+                state.forms = action.payload;
                 state.lastFetched = Date.now();
             })
-            .addCase(fetchFacultySubjects.rejected, (state, action) => {
+            .addCase(fetchStudentForms.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });
     },
 });
 
-export default facultySubjectSlice.reducer;
+export default studentFormSlice.reducer;

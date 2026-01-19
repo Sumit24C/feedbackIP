@@ -18,11 +18,11 @@ function MobileBottomNav() {
         label: "Forms",
         icon: ClipboardList,
       },
-      {
-        path: "/student/attendance",
-        label: "Attendance",
-        icon: CalendarCheck,
-      },
+      // {
+      //   path: "/student/attendance",
+      //   label: "Attendance",
+      //   icon: CalendarCheck,
+      // },
     ],
     faculty: [
       {

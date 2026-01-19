@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
-import { api } from "@/api/api";
-import { toast } from "sonner";
+import { useState } from "react";
 import StudentFeedbackCard from "@/components/forms/StudentFeedbackCard";
 import {
   Select,
@@ -9,25 +7,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { extractErrorMsg } from "@/utils/extractErrorMsg";
+import { useSelector } from "react-redux";
 
 export default function FeedbackFormList() {
-  const [forms, setForms] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("pending");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get("/student");
-        setForms(res.data.data);
-      } catch (error) {
-        toast.error(extractErrorMsg(error) || "No form found");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { loading, forms } = useSelector((state) => state.studentForms);
 
   if (loading)
     return (

@@ -3,14 +3,15 @@ import { api } from "@/api/api";
 import { extractErrorMsg } from "@/utils/extractErrorMsg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { InputField } from "@/components/profile/InputField";
+import { ProfileField } from "@/components/profile/ProfileField";
+import { toast } from "sonner";
 
 function StudentProfilePage() {
 
   const [profileInfo, setProfileInfo] = useState({});
   const [loading, setLoading] = useState(false);
-  const [errMsg, setErrMsg] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -26,7 +27,7 @@ function StudentProfilePage() {
         const res = await api.get("/user/user-profile");
         setProfileInfo(res.data.data);
       } catch (error) {
-        setErrMsg(extractErrorMsg(error));
+        toast.error(extractErrorMsg(error))
       } finally {
         setLoading(false);
       }
@@ -35,19 +36,19 @@ function StudentProfilePage() {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    setErrMsg("");
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      return setErrMsg("New Password & Confirm Password do not match");
+      return toast.error("New Password & Confirm Password do not match");
     }
 
+    setPasswordLoading(true);
     try {
-      await api.post("/user/update-password", {
+      const res = await api.post("/user/update-password", {
         oldPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
 
-      alert("Password Updated Successfully!");
+      toast.success(res.data.message || "Password Updated Successfully!");
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
@@ -55,7 +56,9 @@ function StudentProfilePage() {
       });
       setShowPasswordForm(false);
     } catch (error) {
-      setErrMsg(extractErrorMsg(error));
+      toast.error(extractErrorMsg(error));
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -64,26 +67,23 @@ function StudentProfilePage() {
       <h1 className="text-3xl font-bold text-center mb-2">
         Student Profile
       </h1>
-
-      {loading && <p className="text-blue-600 text-center">Loading...</p>}
-      {errMsg && <p className="text-red-500 text-sm text-center">{errMsg}</p>}
-
       <Card className="shadow-md border-blue-200">
         <CardHeader>
           <CardTitle className="text-lg">Profile Information</CardTitle>
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ProfileField label="Roll Number" value={profileInfo.roll_no} />
-          <ProfileField label="Class Section" value={`${profileInfo?.class_id?.year}-${profileInfo?.class_id?.name}`} />
-          <ProfileField label="Academic Year" value={profileInfo.academic_year} />
-          <ProfileField label="Department" value={profileInfo.dept?.name} />
+          <ProfileField label="Roll Number" value={profileInfo.roll_no} loading={loading} />
+          <ProfileField label="Class Section" value={`${profileInfo?.class_id?.year}-${profileInfo?.class_id?.name}`} loading={loading} />
+          <ProfileField label="Academic Year" value={profileInfo.academic_year} loading={loading} />
+          <ProfileField label="Department" value={profileInfo.dept?.name} loading={loading} />
         </CardContent>
 
         <div className="p-4">
           <Button
             onClick={() => setShowPasswordForm(!showPasswordForm)}
             className="w-full"
+            disabled={loading}
           >
             {showPasswordForm ? "Cancel" : "Update Password"}
           </Button>
@@ -123,8 +123,12 @@ function StudentProfilePage() {
                 }
               />
 
-              <Button type="submit" className="w-full">
-                Update Password
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={passwordLoading}
+              >
+                {passwordLoading ? "Updating..." : "Update Password"}
               </Button>
             </form>
           </CardContent>
@@ -133,19 +137,5 @@ function StudentProfilePage() {
     </div>
   );
 }
-
-const ProfileField = ({ label, value }) => (
-  <div>
-    <p className="text-gray-500 text-sm">{label}</p>
-    <p className="font-semibold">{value || "-"}</p>
-  </div>
-);
-
-const InputField = ({ label, type, value, onChange }) => (
-  <div className="flex flex-col gap-1">
-    <Label className="text-sm">{label}</Label>
-    <Input type={type} value={value} onChange={onChange} required />
-  </div>
-);
 
 export default StudentProfilePage;
