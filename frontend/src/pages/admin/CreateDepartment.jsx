@@ -38,7 +38,7 @@ export default function CreateDepartment() {
       const form = new FormData();
       form.append("dept_name", deptName);
       form.append("dept_code", deptCode);
-      form.append("classess", classFile);
+      form.append("classes", classFile);
       form.append("faculties", facultyFile);
       form.append("subjects", subjectFile);
 

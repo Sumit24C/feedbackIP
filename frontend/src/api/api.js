@@ -23,7 +23,7 @@ api.interceptors.response.use(
             prevRequest._retry = true;
 
             try {
-                await refreshApi.post("/auth/refresh");
+                await refreshApi.get("/user/refresh-token");
                 return api(prevRequest);
             } catch (refreshError) {
                 return Promise.reject(refreshError);

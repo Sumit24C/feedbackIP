@@ -20,9 +20,7 @@ function ElectiveTab() {
 
     const fetchElectives = async () => {
         try {
-            const res = await api.get(
-                `/admin/faculty-subjects/${dept_id}?type=elective`
-            );
+            const res = await api.get(`/admin/faculty-subjects/${dept_id}?type=elective`);
             setElectives(res.data.data);
         } catch (error) {
             toast.error(extractErrorMsg(error));
@@ -140,7 +138,7 @@ function ElectiveTab() {
                         Elective Enrollments
                     </h2>
                     <p className="text-sm text-gray-500">
-                        Manage students enrolled in elective subjects
+                        Manage students enrolled in elective subjects ({electiveStudents?.length || 0})
                     </p>
                 </div>
 

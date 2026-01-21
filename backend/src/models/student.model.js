@@ -7,9 +7,10 @@ const studentSchema = new mongoose.Schema({
         ref: "User",
         unique: true,
     },
-    dept: {
+    class_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Department",
+        ref: "ClassSection",
+        required: true,
     },
     roll_no: {
         type: Number,
@@ -19,17 +20,6 @@ const studentSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    class_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "ClassSection",
-        required: true,
-    },
-    electives: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Subject"
-        }
-    ]
 }, { timestamps: true })
 
 studentSchema.index({ class_id: 1, roll_no: 1 }, { unique: true });

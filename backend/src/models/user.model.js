@@ -3,6 +3,10 @@ import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
 const userSchema = new mongoose.Schema({
+    institute: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Institute",
+    },
     email: {
         type: String,
         index: true,

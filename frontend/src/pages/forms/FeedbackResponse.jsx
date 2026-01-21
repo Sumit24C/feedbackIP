@@ -19,7 +19,7 @@ const FeedbackResponse = () => {
         const res = await api.get(url);
         setEntities(res.data.data || []);
       } catch (error) {
-        console.error("Failed to fetch faculty subjects", error);
+        // console.error("Failed to fetch faculty subjects", error);
         toast.error(extractErrorMsg(error));
       } finally {
         setLoading(false);

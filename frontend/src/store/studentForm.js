@@ -10,20 +10,22 @@ export const fetchStudentForms = createAsyncThunk(
             const res = await api.get("/student");
             return res.data.data;
         } catch (error) {
-            toast.error(extractErrorMsg(error) || "forms not found");
+            // toast.error(extractErrorMsg(error) || "forms not found");
             return rejectWithValue(extractErrorMsg(error));
         }
     }
 );
 
+const initialState = {
+    forms: [],
+    loading: false,
+    error: null,
+    lastFetched: null,
+}
+
 const studentFormSlice = createSlice({
     name: "studentForms",
-    initialState: {
-        forms: [],
-        loading: false,
-        error: null,
-        lastFetched: null,
-    },
+    initialState,
     reducers: {
         invalidateLastFetch: (state, action) => {
             state.lastFetched = null;
@@ -42,7 +44,8 @@ const studentFormSlice = createSlice({
             .addCase(fetchStudentForms.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
-            });
+            })
+            .addCase("auth/logout", () => initialState);
     },
 });
 

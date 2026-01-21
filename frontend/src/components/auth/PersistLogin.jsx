@@ -19,7 +19,7 @@ function PersistLogin() {
                 return res.data.data
             } catch (error) {
                 dispatch(logout());
-                console.error(error)
+                // console.error(error)
                 return false
             } finally {
                 setIsLoading(false)

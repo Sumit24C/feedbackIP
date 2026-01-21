@@ -143,7 +143,7 @@ function ClassTab() {
         <div>
           <h2 className="text-xl font-semibold">Classes</h2>
           <p className="text-sm text-muted-foreground">
-            Class and batch structure
+            Class and batch structure ({classes?.length || 0})
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>Add Class</Button>

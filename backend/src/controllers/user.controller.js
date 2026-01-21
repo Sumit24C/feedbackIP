@@ -207,13 +207,55 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 export const getProfileInfo = asyncHandler(async (req, res) => {
     const userRole = req.user.role;
     let user;
+    const payload = {
+        email: req.user.email,
+        fullname: req.user.fullname,
+        role: userRole,
+    };
     if (userRole === "student") {
-        user = await Student.findOne({ user_id: req.user._id }).populate("dept", "name").populate("class_id", "year name");
+        user = await Student.findOne(
+            { user_id: req.user._id },
+            {
+                roll_no: 1,
+                academic_year: 1,
+                class_id: 1
+            }
+        ).populate({
+            path: "class_id",
+            select: "year name dept",
+            populate: {
+                path: "dept",
+                select: "name"
+            }
+        });
+
+        if (!user) {
+            throw new ApiError(404, "Student not found");
+        }
+
+        Object.assign(payload, {
+            roll_no: user.roll_no,
+            academic_year: user.academic_year,
+            class_year: user.class_id.year,
+            class_name: user.class_id.name,
+            dept_name: user.class_id.dept.name,
+        });
+
     } else if (userRole === "faculty") {
-        user = await Faculty.findOne({ user_id: req.user._id }).populate("dept", "name");
+        user = await Faculty.findOne({ user_id: req.user._id })
+            .populate("dept", "name");
+
+        if (!user) {
+            throw new ApiError(404, "Faculty not found");
+        }
+
+        Object.assign(payload, {
+            designation: user.designation,
+            dept_name: user.dept.name,
+        });
     }
 
     return res.status(200)
-        .json(new ApiResponse(200, user, "user info fetched successfully"))
+        .json(new ApiResponse(200, payload, "user info fetched successfully"))
 });
 

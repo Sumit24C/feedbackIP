@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InputField } from "@/components/profile/InputField";
+import { ProfileField } from "@/components/profile/ProfileField";
 
 function FacultyProfilePage() {
   const [profileInfo, setProfileInfo] = useState({});
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
-  const { userData } = useSelector((state) => state.auth);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -73,10 +74,10 @@ function FacultyProfilePage() {
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ProfileField label="Name" value={userData.fullname} />
-          <ProfileField label="Email" value={userData.email} />
-          <ProfileField label="Department" value={profileInfo.dept?.name} />
-          <ProfileField label="Designation" value={profileInfo.isHOD ? "HOD" : "Faculty"} />
+          <ProfileField label="Name" value={profileInfo.fullname} />
+          <ProfileField label="Email" value={profileInfo.email} />
+          <ProfileField label="Department" value={profileInfo.dept_name} />
+          <ProfileField label="Designation" value={profileInfo.designation} />
         </CardContent>
 
         <div className="p-4">
@@ -131,19 +132,5 @@ function FacultyProfilePage() {
     </div>
   );
 }
-
-const ProfileField = ({ label, value }) => (
-  <div>
-    <p className="text-gray-500 text-sm">{label}</p>
-    <p className="font-semibold">{value || "-"}</p>
-  </div>
-);
-
-const InputField = ({ label, type, value, onChange }) => (
-  <div className="flex flex-col gap-1">
-    <Label className="text-sm">{label}</Label>
-    <Input type={type} value={value} onChange={onChange} required />
-  </div>
-);
 
 export default FacultyProfilePage;

@@ -42,7 +42,7 @@ router.use(verifyJWT, verifyRole("admin"));
 router.route("/").post(upload.fields([
     { name: "faculties", maxCount: 1 },
     { name: "subjects", maxCount: 1 },
-    { name: "classess", maxCount: 1 },
+    { name: "classes", maxCount: 1 },
 ]), createDepartment).get(getDepartments);
 
 router.post("/add-faculty-subjects/:dept_id", upload.single("facultysubjects"), uploadFacultySubjects);

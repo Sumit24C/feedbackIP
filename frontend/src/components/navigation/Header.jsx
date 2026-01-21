@@ -32,12 +32,12 @@ function Header() {
     faculty: [
       { path: "/faculty/all-forms", name: "All Forms" },
       { path: "/faculty/create-form", name: "Create Form" },
-      { path: "/faculty/view-attendance", name: "Attendance" },
+      // { path: "/faculty/view-attendance", name: "Attendance" },
       { path: "/faculty/weekly-feedback", name: "Weekly-Feedback" },
     ],
     student: [
       { path: "/student/forms", name: "Feedback Form" },
-      { path: "/student/attendance", name: "Attendance" }
+      // { path: "/student/attendance", name: "Attendance" }
     ],
   };
 

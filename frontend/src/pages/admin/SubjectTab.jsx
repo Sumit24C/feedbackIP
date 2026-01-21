@@ -91,7 +91,7 @@ function SubjectTab() {
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Subjects</h2>
           <p className="text-sm text-gray-500">
-            Subjects offered by this department
+            Subjects offered by this department ({subjects?.length || 0})
           </p>
         </div>
 

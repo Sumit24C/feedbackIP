@@ -152,7 +152,7 @@ function FacultySubjectTab() {
                         Faculty–Subject Mapping
                     </h2>
                     <p className="text-sm text-gray-500">
-                        Faculty assignments for subjects and classes
+                        Faculty assignments for subjects and classes ({facultySubjects?.length || 0})
                     </p>
                 </div>
 

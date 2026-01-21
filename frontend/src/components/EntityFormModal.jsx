@@ -14,7 +14,7 @@ function EntityFormModal({
 }) {
   const config = ENTITY_CONFIG[entity];
   const [uploadMode, setUploadMode] = useState(false);
-
+  const [selectedFile, setSelectedFile] = useState();
   const isFacultySubject = entity === "facultySubjects";
   const isElectives = entity === "electives";
 
@@ -169,7 +169,7 @@ function EntityFormModal({
                   <option value="tutorial">Tutorial</option>
                 </select>
 
-                {(formType !== "theory" && selectedSubject.type !== "elective") && (
+                {(formType !== "theory" && selectedSubject?.type !== "elective") && (
                   <input
                     {...register("batch_code", { required: true })}
                     placeholder="Batch Code (A1, B2...)"
@@ -179,17 +179,24 @@ function EntityFormModal({
               </>
             )}
             {isElectives && (
-              <select
-                {...register("facultySubjectId", { required: true })}
-                className="w-full border rounded px-3 py-2 text-sm"
-              >
-                <option value="">Select Elective</option>
-                {meta?.map((fs) => (
-                  <option key={fs._id} value={fs._id}>
-                    {fs.subject?.name} – {fs.faculty?.user_id?.fullname}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-1">
+                <select
+                  {...register("facultySubjectId", { required: true })}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Select Elective</option>
+                  {meta?.map((fs) => (
+                    <option key={fs._id} value={fs._id}>
+                      {fs.subject?.name} – {fs.faculty?.user_id?.fullname}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  {...register("email", { required: true })}
+                  placeholder="Student Email"
+                  className="w-full border rounded px-3 py-2 text-sm"
+                />
+              </div>
             )}
             {!isFacultySubject && !isElectives &&
               config.fields.map((field) =>
@@ -329,23 +336,55 @@ function EntityFormModal({
               </select>
             )}
 
-            <input
-              type="file"
-              accept={config.uploadAccept}
-              className="border p-2 w-full rounded"
-              onChange={(e) =>
-                isElectives
-                  ? onUpload(watch("facultySubjectId"), e.target.files[0])
-                  : onUpload(e.target.files[0])
-              }
-            />
+            <div className="bg-white border rounded-xl p-5 shadow-sm space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Upload Excel File
+              </label>
 
-            <button
-              onClick={() => setUploadMode(false)}
-              className="mt-3 text-sm text-blue-600"
-            >
-              Back to single entry
-            </button>
+              <input
+                type="file"
+                accept={config.uploadAccept}
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-gray-600
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-lg file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-emerald-50 file:text-emerald-700
+                  hover:file:bg-emerald-100"
+              />
+
+              {selectedFile && (
+                <p className="text-xs text-gray-500">
+                  Selected: <span className="font-medium">{selectedFile.name}</span>
+                </p>
+              )}
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  disabled={!selectedFile}
+                  onClick={() =>
+                    isElectives
+                      ? onUpload(watch("facultySubjectId"), selectedFile)
+                      : onUpload(selectedFile)
+                  }
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition
+                    ${selectedFile
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
+                >
+                  Upload
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUploadMode(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Back to single entry
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>

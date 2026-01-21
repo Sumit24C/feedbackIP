@@ -9,7 +9,7 @@ export const fetchFacultySubjects = createAsyncThunk(
             const res = await api.get("/faculty");
             return res.data.data;
         } catch (error) {
-            toast.error(extractErrorMsg(error) || "Subject not found");
+            // toast.error(extractErrorMsg(error) || "Subject not found");
             return rejectWithValue(extractErrorMsg(error));
         }
     }

@@ -40,11 +40,11 @@ function MobileBottomNav() {
         label: "Weekly",
         icon: BarChart3,
       },
-      {
-        path: "/faculty/view-attendance",
-        label: "Attendance",
-        icon: CalendarCheck,
-      },
+      // {
+      //   path: "/faculty/view-attendance",
+      //   label: "Attendance",
+      //   icon: CalendarCheck,
+      // },
     ],
     admin: [
       {

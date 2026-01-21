@@ -56,7 +56,7 @@ function FacultyTab() {
       );
       toast.success(res.data.message || "successfully added faculty");
     } catch (error) {
-      console.error(extractErrorMsg(error));
+      // console.error(extractErrorMsg(error));
       toast.error(extractErrorMsg(error));
     } finally {
       setOpen(false);
@@ -89,7 +89,7 @@ function FacultyTab() {
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Faculties</h2>
           <p className="text-sm text-gray-500">
-            List of faculty members in this department
+            List of faculty members in this department ({faculties?.length || 0})
           </p>
         </div>
 

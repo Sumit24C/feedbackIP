@@ -14,7 +14,7 @@ function AttendanceDashboard() {
                 const res = await api.get('/attendance/faculty/student');
                 setAttendanceRecords(res.data.data);
             } catch (error) {
-                console.error('viewAttendance :: error :: ', error);
+                // console.error('viewAttendance :: error :: ', error);
                 setErrMsg(extractErrorMsg(error));
             } finally {
                 setLoading(false);

@@ -10,7 +10,7 @@ function StudentTab() {
   const [students, setStudents] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [yearFilter, setYearFilter] = useState("SY");
+  const [yearFilter, setYearFilter] = useState("TY");
 
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
@@ -116,7 +116,7 @@ function StudentTab() {
             Students
           </h2>
           <p className="text-sm text-gray-500">
-            List of enrolled students in this department
+            List of enrolled students in this department ({students?.length || 0})
           </p>
         </div>
 
@@ -223,7 +223,7 @@ function StudentTab() {
                         className="w-full border rounded px-2 py-1 text-sm"
                       />
                     ) : (
-                      s.user_id?.fullname || "—"
+                      s.user?.fullname || "—"
                     )}
                   </td>
                   <td className="p-3">
@@ -237,7 +237,7 @@ function StudentTab() {
                       />
                     ) : (
                       <span className="text-gray-600">
-                        {s.user_id?.email || "—"}
+                        {s.user?.email || "—"}
                       </span>
                     )}
                   </td>
@@ -251,7 +251,7 @@ function StudentTab() {
                         className="w-20 border rounded px-2 py-1 text-sm text-center"
                       />
                     ) : (
-                      s.class_id?.name || "—"
+                      s.class?.name || "—"
                     )}
                   </td>
                   <td className="p-3 text-center">
@@ -292,9 +292,9 @@ function StudentTab() {
                           setEditingId(s._id);
                           setEditData({
                             roll_no: s.roll_no,
-                            fullname: s.user_id?.fullname || "",
-                            email: s.user_id?.email || "",
-                            class_name: s.class_id?.name,
+                            fullname: s.user?.fullname || "",
+                            email: s.user?.email || "",
+                            class_name: s.class?.name,
                             academic_year: s.academic_year,
                           });
                         }}
