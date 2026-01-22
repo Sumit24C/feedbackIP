@@ -34,12 +34,6 @@ export default function FeedbackFormList() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-2">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Feedback Forms
-          </h1>
-        </div>
-
         <div className="sticky top-16 z-20 bg-gray-50 border-b py-3 flex justify-end">
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-44">

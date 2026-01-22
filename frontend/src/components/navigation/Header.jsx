@@ -73,15 +73,12 @@ function Header() {
       "
     >
       <div className="flex items-center gap-3 justify-between">
-        <div
-          className="
-            w-11 h-11 rounded-2xl
-            bg-gradient-to-br bg-blue-700
-            flex items-center justify-center
-            text-white text-lg font-bold sm:hidden
-          "
-        >
-          C
+        <div className="w-11 h-11 flex items-center justify-center sm:hidden">
+          <img
+            src="/classSetu_logo.jpeg"
+            alt="ClassSetu"
+            className="w-12 h-12 rounded-xl"
+          />
         </div>
 
         <Link

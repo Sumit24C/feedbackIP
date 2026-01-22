@@ -6,8 +6,10 @@ import { Form } from "../models/form.model.js"
 import { Response } from "../models/response.model.js"
 import { Student } from "../models/student.model.js"
 import { FacultySubject } from "../models/faculty_subject.model.js"
-import { getClassSection, getStudentYear, resolveBatchCodes, resolveBatchCodeByType } from "../utils/student.utils.js"
+import { resolveBatchCodes, resolveBatchCodeByType } from "../utils/student.utils.js"
 import { ElectiveEnrollment } from "../models/elective_enrollment.model.js"
+import { redisClient } from "../db/redisConfig.js"
+import { FORM_CACHE_TTL } from "../constants.js"
 
 export const getFormById = asyncHandler(async (req, res) => {
     const { form_id, fs_id } = req.params;
@@ -15,34 +17,49 @@ export const getFormById = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Form Id is required");
     };
 
-    const form = await Form.findById(form_id).populate("questions");
+    const [form, student] = await Promise.all([
+        Form.findById(form_id).populate("questions"),
+        Student
+            .findOne({ user_id: req.user._id })
+            .populate({
+                path: "class_id",
+                select: "batches dept",
+            }),
+    ]);
+
     if (!form) {
         throw new ApiError(404, "Form not found");
     };
-
-    const student = await Student
-        .findOne({ user_id: req.user._id })
-        .populate({
-            path: "class_id",
-            select: "batches dept",
-        });
 
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
 
+    if (!student?.class_id) {
+        throw new ApiError(400, "Student class not assigned");
+    }
+
     if (form.targetType === "DEPARTMENT" && !form.dept.includes(student.class_id.dept)) {
         throw new ApiError(404, "Department not found");
     }
+
     const existingResponse = await Response.findOne({ student: student._id, form: form._id });
     if (existingResponse) {
         throw new ApiError(409, "Response already submitted");
     }
 
     const today = new Date();
-    if (form.deadline < today) {
+    if (new Date(form.deadline).getTime() < Date.now()) {
         throw new ApiError(409, "Form is expired");
     };
+
+    const cacheKey = `form:${form._id}:user:${req.user._id}`;
+    const cachedForm = await redisClient.json.get(cacheKey);
+    if (cachedForm) {
+        return res.status(200).json(
+            new ApiResponse(200, cachedForm, "successfully fetched form")
+        );
+    }
 
     const payload = {
         formId: form._id,
@@ -62,6 +79,13 @@ export const getFormById = asyncHandler(async (req, res) => {
         payload.entities = [{
             _id: student.class_id.dept
         }];
+        try {
+            await redisClient.json.set(cacheKey, '.', payload);
+            await redisClient.expire(cacheKey, FORM_CACHE_TTL);
+        } catch (error) {
+            // console.warn("Redis cache failed:", error.message);
+        }
+
         return res.status(200).json(
             new ApiResponse(200, payload, "successfully fetched form")
         );
@@ -179,6 +203,12 @@ export const getFormById = asyncHandler(async (req, res) => {
     }
 
     payload.entities = entities;
+    try {
+        await redisClient.json.set(cacheKey, '.', payload);
+        await redisClient.expire(cacheKey, FORM_CACHE_TTL);
+    } catch (err) {
+        // console.warn("Redis cache failed:", err.message);
+    }
 
     return res.status(200).json(
         new ApiResponse(200, payload, "successfully fetched form")
@@ -191,9 +221,23 @@ export const getForms = asyncHandler(async (req, res) => {
     if (!student) {
         throw new ApiError(404, "Student not found");
     }
+    const cacheKey = `forms:user:${req.user._id}`;
+
+    const cachedForms = await redisClient.json.get(cacheKey);
+    if (cachedForms) {
+        return res.status(200).json({
+            success: true,
+            message: "Forms fetched successfully",
+            data: cachedForms
+        });
+    }
+
+    if (!student?.class_id) {
+        throw new ApiError(400, "Student class not assigned");
+    }
 
     const batchMap = resolveBatchCodes(
-        student.class_id.batches,
+        student.class_id?.batches,
         student.roll_no
     );
 
@@ -209,14 +253,14 @@ export const getForms = asyncHandler(async (req, res) => {
             path: "subject",
             match: { type: "dept" },
             select: "name type"
-        }),
+        }).lean(),
 
         ElectiveEnrollment.find({
             student: student._id
         }).populate({
             path: "facultySubject",
             select: "facultyName"
-        }),
+        }).lean(),
 
         Response.find({ student: student._id }).lean(),
     ]);
@@ -253,13 +297,14 @@ export const getForms = asyncHandler(async (req, res) => {
     if (forms.length === 0) {
         throw new ApiError(404, "Forms not found");
     }
+
     const facultySubjectMap = new Map(
         studentFacultySubjects.map(fs => [fs._id.toString(), fs])
     );
 
     const submittedFormIds = new Set(submittedForms.map(r => r.form.toString()));
 
-    const result = forms.map(form => {
+    const payload = forms.map(form => {
         let matchedFacultySubjects = null;
         if (form.targetType === "CLASS") {
             for (const fsId of form.facultySubject) {
@@ -287,17 +332,24 @@ export const getForms = asyncHandler(async (req, res) => {
             payload.facultySubjectId = student.class_id.dept
             payload.facultyName = null
         } else {
-            payload.facultyName = matchedFacultySubjects?.facultyName || null
             payload.facultySubjectId = matchedFacultySubjects?._id || null
+            payload.facultyName = matchedFacultySubjects?.facultyName || null
         }
 
         return payload
     });
 
-    res.status(200).json({
+    try {
+        await redisClient.json.set(cacheKey, '.', payload);
+        await redisClient.expire(cacheKey, FORM_CACHE_TTL);
+    } catch (error) {
+        // console.warn("Redis cache failed:", error.message);
+    }
+
+    return res.status(200).json({
         success: true,
         message: "Forms fetched successfully",
-        data: result
+        data: payload
     });
 });
 
@@ -342,6 +394,13 @@ export const submitResponse = asyncHandler(async (req, res) => {
     const savedResponses = await Response.insertMany(responseDocs);
     if (!savedResponses) {
         throw new ApiError(500, "Failed to submit response");
+    }
+
+    try {
+        await redisClient.del(`form:${form._id}:user:${req.user._id}`);
+        await redisClient.del(`forms:user:${req.user._id}`);
+    } catch (error) {
+        // console.warn("Redis cache invalidation failed:", error.message);
     }
 
     return res.status(200).json(

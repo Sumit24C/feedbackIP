@@ -86,12 +86,6 @@ function AllForms() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Feedback Forms
-        </h1>
-      </div>
-
       <div className="sticky top-16 z-20 bg-gray-50 border-b py-3 flex flex-wrap justify-end gap-3">
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="max-w-48">
