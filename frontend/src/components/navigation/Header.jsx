@@ -128,7 +128,7 @@ function Header() {
                   hover:scale-105 transition-all
                 "
               >
-                {userData?.email?.[0]?.toUpperCase() || "U"}
+                {userData?.fullname?.[0]?.toUpperCase() || "U"}
               </div>
             </DropdownMenuTrigger>
 
@@ -139,24 +139,23 @@ function Header() {
 
               <DropdownMenuSeparator />
 
-              {userData?.role !== "admin" && (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link to={`/${userData?.role}/profile`} className="w-full">
-                      <User size={16} />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="w-full">
-                      <Settings size={16} />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
+              <>
+                <DropdownMenuItem asChild>
+                  <Link to={`/${userData?.role}/profile`} className="w-full">
+                    <User size={16} />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="w-full">
+                    <Settings size={16} />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
 
               <DropdownMenuItem
                 className="text-red-600 font-semibold focus:bg-red-50 dark:focus:bg-red-900 cursor-pointer gap-2 flex items-center"

@@ -217,19 +217,21 @@ export const getFormById = asyncHandler(async (req, res) => {
 
 export const getForms = asyncHandler(async (req, res) => {
 
-    const student = await Student.findOne({ user_id: req.user._id }).populate("class_id", "batches dept");
-    if (!student) {
-        throw new ApiError(404, "Student not found");
-    }
     const cacheKey = `forms:user:${req.user._id}`;
 
     const cachedForms = await redisClient.json.get(cacheKey);
     if (cachedForms) {
+        console.log("cached")
         return res.status(200).json({
             success: true,
             message: "Forms fetched successfully",
             data: cachedForms
         });
+    }
+
+    const student = await Student.findOne({ user_id: req.user._id }).populate("class_id", "batches dept");
+    if (!student) {
+        throw new ApiError(404, "Student not found");
     }
 
     if (!student?.class_id) {

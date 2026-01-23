@@ -19,6 +19,8 @@ import { getStudentAcademicYear, getStudentYear } from "../utils/student.utils.j
 import { Admin } from "../models/admin.model.js";
 import { ElectiveEnrollment } from "../models/elective_enrollment.model.js";
 import { WeeklyFeedback } from "../models/weekly_feedback.model.js";
+import { createStudentExcelSchema } from "../schemas/index.js";
+import { normalizeEmail } from "../utils/normalizeEmail.js";
 
 //department controllers
 export const createDepartment = asyncHandler(async (req, res) => {
@@ -1217,9 +1219,13 @@ export const addStudentFile = asyncHandler(async (req, res) => {
         throw new ApiError(403, "DepartmentId is required");
     }
 
-    const department = await Department.findById(dept_id);
+    const department = await Department.findById(dept_id).populate("institute", "emailDomain");
     if (!department) {
         throw new ApiError(404, "Department not found");
+    }
+
+    if (!department.institute?.emailDomain) {
+        throw new ApiError(500, "Institute email domain is not configured");
     }
 
     const studentFile = req.file;
@@ -1232,21 +1238,28 @@ export const addStudentFile = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Excel file is empty");
     }
 
+    const sample = studentData[0];
+    if (!sample?.email) {
+        throw new ApiError(400, "Excel file must contain an 'email' column");
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const defaultPassword = `${department.code.toLowerCase()}123`;
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-        const emails = studentData.map(s => s?.email?.toLowerCase());
+
+        const emails = studentData.map(s => s?.email?.toLowerCase()).filter(Boolean);
         const existingUsers = await User.find(
             { email: { $in: emails } },
             { email: 1 }
         );
 
         const existingEmailSet = new Set(
-            existingUsers.map(u => u.email)
+            existingUsers.map(u => normalizeEmail(u.email))
         );
+
 
         const classNameYearMap = new Map();
 
@@ -1265,7 +1278,6 @@ export const addStudentFile = asyncHandler(async (req, res) => {
             dept: dept_id,
             $or: classes
         });
-
         if (classSections.length === 0) {
             throw new ApiError(404, "No matching classes found for department");
         }
@@ -1277,24 +1289,41 @@ export const addStudentFile = asyncHandler(async (req, res) => {
                 strength: cs?.strength
             });
         });
-
         const newUsers = [];
         const newStudents = [];
-        let skipped = 0;
+        let skippedExisting = 0;
+        let skippedInvalid = 0;
+        const StudentExcelSchema = createStudentExcelSchema(department.institute?.emailDomain);
 
         for (const s of studentData) {
-            const email = s.email?.toLowerCase();
-            if (!email || existingEmailSet.has(email)) {
-                skipped++;
+            const student = StudentExcelSchema.safeParse(s);
+            if (!student.success) {
+                skippedInvalid++;
                 continue;
             }
 
-            const year = getStudentYear(s.academic_year);
-            const key = `${year}_${s.class_name}`;
+            const email = student.data.email;
+
+            if (!email) {
+                skippedInvalid++;
+                continue;
+            }
+
+            if (existingEmailSet.has(email)) {
+                skippedExisting++;
+                continue;
+            }
+            existingEmailSet.add(email);
+            const { academic_year, class_name, fullname, roll_no } = student.data;
+
+            const year = getStudentYear(academic_year);
+            const key = `${year}_${class_name}`;
+
+
             const { class_id, strength } = classMap.get(key);
 
             if (!class_id || !strength) {
-                skipped++;
+                skippedInvalid++;
                 continue;
             }
 
@@ -1302,11 +1331,11 @@ export const addStudentFile = asyncHandler(async (req, res) => {
 
             newUsers.push({
                 _id: userId,
-                fullname: s.fullname,
+                fullname: fullname,
                 email,
                 password: hashedPassword,
                 role: "student",
-                institute: department.institute
+                institute: department.institute?._id
             });
 
             if (Number(strength) < Number(s.roll_no)) {
@@ -1315,8 +1344,8 @@ export const addStudentFile = asyncHandler(async (req, res) => {
 
             newStudents.push({
                 user_id: userId,
-                roll_no: Number(s.roll_no),
-                academic_year: Number(s.academic_year),
+                roll_no: Number(roll_no),
+                academic_year: Number(academic_year),
                 class_id
             });
         }
@@ -1328,12 +1357,11 @@ export const addStudentFile = asyncHandler(async (req, res) => {
             return res.status(200).json(
                 new ApiResponse(
                     200,
-                    { inserted: 0, skipped },
+                    { inserted: 0, skippedExisting, skippedInvalid },
                     "No new students to insert"
                 )
             );
         }
-
         await User.insertMany(newUsers, { session });
         await Student.insertMany(newStudents, { session });
 
@@ -1345,7 +1373,7 @@ export const addStudentFile = asyncHandler(async (req, res) => {
                 200,
                 {
                     inserted: newStudents.length,
-                    skipped
+                    skippedExisting, skippedInvalid
                 },
                 "Students added successfully"
             )
@@ -1357,7 +1385,7 @@ export const addStudentFile = asyncHandler(async (req, res) => {
         if (error instanceof ApiError) {
             throw error;
         }
-        throw new ApiError(500, "Failed to upload students");
+        throw new ApiError(500, `Failed to upload students ${error}`);
     }
 
 });

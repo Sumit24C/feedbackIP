@@ -253,6 +253,17 @@ export const getProfileInfo = asyncHandler(async (req, res) => {
             designation: user.designation,
             dept_name: user.dept.name,
         });
+    } else if (userRole === "admin") {
+        user = await Admin.findOne({ user_id: req.user._id })
+            .populate("institute", "name code emailDomain permission");
+
+        if (!user) {
+            throw new ApiError(404, "Admin not found");
+        }
+
+        Object.assign(payload, {
+            institute: user.institute,
+        });
     }
 
     return res.status(200)

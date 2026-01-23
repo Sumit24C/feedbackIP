@@ -9,7 +9,7 @@ import {
     Contacts
 } from "../src/pages/index"
 import { Authorization, AuthLayout, PersistLogin } from './components/auth'
-import { CreateDepartment, Department, DepartmentList, StudentTab, FacultyTab, SubjectTab, ClassTab, FacultySubjectTab, ElectiveTab } from './pages/admin'
+import { CreateDepartment, Department, DepartmentList, StudentTab, FacultyTab, SubjectTab, ClassTab, FacultySubjectTab, ElectiveTab, AdminProfilePage } from './pages/admin'
 import { AttendanceList, FeedbackForm, FeedbackFormList, StudentProfilePage, SubjectAttendance } from './pages/student'
 import { FacultyProfilePage, ClassAttendance, AttendanceDashboard } from './pages/faculty'
 import { AllForms, CreateFeedbackForm, OverallSummary, QuestionSummary, FeedbackResponse, WeeklyFeedback, FacultySubjectResponse } from './pages/forms'
@@ -24,6 +24,7 @@ function AppRouter() {
                     <Route path="/" element={<App />}>
                         {/* Admin routes */}
                         <Route path="admin" element={<Authorization role="admin" />}>
+                            <Route path='profile' element={<AdminProfilePage />} />
                             <Route path='create-department' element={<CreateDepartment />} />
                             <Route path='department' element={<DepartmentList />} />
                             <Route path="/admin/department/:dept_id" element={<Department />}>

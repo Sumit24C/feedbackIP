@@ -67,8 +67,8 @@ function StudentTab() {
     setLoading(true);
     try {
       const res = await api.post(`/admin/add-students/${dept_id}`, formData);
-      const { inserted, skipped } = res.data.data;
-      toast.success(`inserted: ${inserted}, skipped: ${skipped}` || "Students uploaded");
+      const { inserted, skippedExisting, skippedInvalid } = res.data.data;
+      toast.success(`inserted: ${inserted}, skippedExisting:${skippedExisting}, skippedInvalid: ${skippedInvalid}` || "Students uploaded");
     } catch (error) {
       console.error(extractErrorMsg(error));
       toast.error(extractErrorMsg(error) || "failed to upload students");
