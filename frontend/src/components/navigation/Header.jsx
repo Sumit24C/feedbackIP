@@ -148,12 +148,12 @@ function Header() {
                   </Link>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem asChild>
+                {/* <DropdownMenuItem asChild>
                   <Link to="/settings" className="w-full">
                     <Settings size={16} />
                     <span>Settings</span>
                   </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
               </>
 

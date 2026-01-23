@@ -62,7 +62,6 @@ function AppRouter() {
                             <Route path='view-attendance' element={<AttendanceDashboard />} />
                             <Route path='class-attendance/:id' element={<ClassAttendance />} />
                         </Route>
-                        <Route path="unauthorized" element={<UnAuthorized />} />
                     </Route>
                 </Route>
 
@@ -74,6 +73,7 @@ function AppRouter() {
                     <Route path="/contacts" element={<Contacts />} />
                 </Route>
 
+                <Route path="unauthorized" element={<UnAuthorized />} />
                 <Route path="*" element={<NotFound />} />
             </Route>
         </Routes>

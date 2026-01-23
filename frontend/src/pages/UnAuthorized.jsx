@@ -3,28 +3,43 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-function UnAuthorized() {
+export default function UnAuthorized() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center text-center px-4 gap-4">
-      <motion.h1
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="text-7xl sm:text-9xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent"
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="max-w-md w-full text-center space-y-4"
       >
-        UnAuthorized
-      </motion.h1>
+        {/* Status Code */}
+        <h1 className="text-6xl sm:text-7xl font-bold tracking-tight text-blue-500">
+          403
+        </h1>
 
-      <Button
-        onClick={() => navigate("/admin/department")}
-        className="mt-3 px-6 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white transition-all duration-200"
-      >
-        Go Home
-      </Button>
+        {/* Title */}
+        <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 dark:text-slate-100">
+          Access Restricted
+        </h2>
+
+        {/* Description */}
+        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+          You don’t have permission to view this page.
+          If you believe this is a mistake, please contact your administrator.
+        </p>
+
+        {/* Action */}
+        <div className="pt-2">
+          <Button
+            onClick={() => navigate("/")}
+            className="px-6 rounded-md"
+          >
+            Go to Home
+          </Button>
+        </div>
+      </motion.div>
     </div>
   );
 }
-
-export default UnAuthorized
